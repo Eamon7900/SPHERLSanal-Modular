@@ -1,0 +1,373 @@
+ optparse as op
+ os
+ xml.etree.ElementTree as xml
+ paths
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+ disect_filename
+ os
+          #keep ant info for peak finding
+          #keep ant info for peak finding
+ datafile
+ optparse as op
+ matplotlib
+ matplotlib.pyplot as plt
+ math
+ numpy as np
+ scipy.interpolate as interp
+ combine_bins
+ optparse as op
+ time
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ paths
+ disect_filename
+ os
+ numpy
+ math
+ datafile
+from scipy.interpolate  interp1d
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ disect_filename
+ os
+ numpy as np
+ dump
+ optparse as op
+ numpy
+ sys
+ sys
+ struct
+ sys
+ numpy as np
+ math
+ paths
+ os
+#from timeitDec  timeitDec
+ evtk.hl
+ eos
+   optparse as op
+from scipy  interpolate
+ xml.etree.ElementTree as xml
+ optparse as op
+ numpy as np
+ math
+ struct
+ paths
+ os
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+    #from mpl_toolkits.mplot3d  axes3d
+    # matplotlib
+    # matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+    #from mpl_toolkits.mplot3d  axes3d
+    # matplotlib
+    # matplotlib.pyplot as plt
+     matplotlib.pyplot as plt
+      from mpl_toolkits.mplot3d  axes3d
+       matplotlib
+       matplotlib.pyplot as plt
+          #from mpl_toolkits.mplot3d  axes3d
+          # matplotlib
+          # matplotlib.pyplot as plt
+     matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d  axes3d
+     matplotlib
+     matplotlib.pyplot as plt
+from calculate_residuals_of_light_curve_fit  Bin, BinnedData, DataFunction
+ datafile
+ optparse as op
+ xml.etree.ElementTree as xml
+ numpy as np
+ scipy
+ os
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+ paths
+ disect_filename
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ numpy as np
+ sys
+ os
+ disect_filename
+ parser
+from math  *
+ xml.etree.ElementTree as xml
+ parse_formula
+ mywarnings
+ warnings
+ paths
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ combine_bins
+ paths
+ disect_filename
+ sys
+ paths
+ optparse as op
+ xml.etree.ElementTree as xml
+ parser
+ numpy
+ disect_filename
+ glob
+ warnings
+ mywarnings#sets a custom warning print out
+ dump
+ combine_bins
+from math  *
+ hdf
+ os.path
+ sys
+ paths
+ hdf
+ dump
+ optparse as op
+ xml.etree.ElementTree as xml
+ parse_formula
+ warnings
+ mywarnings#sets a custom warning print out
+ combine_bins
+ disect_filename
+ glob
+ numpy
+ parser
+from math  *
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ combine_bins
+ paths
+ disect_filename
+from myExceptions  *
+ os
+ optparse as op
+ sys
+ combine_bins
+from make_profiles  make_fileSet
+ dump
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ disect_filename
+ warnings
+ sys
+ parser
+from math  *
+ os
+ sys
+#check paths whenever this script is ed
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ paths
+ disect_filename
+ xml.etree.ElementTree as xml
+ mywarnings
+ warnings
+ optparse as op
+# getopt
+ argparse
+ sys
+ os
+from math  *
+ glob
+ numpy as np
+ make_2DSlices
+ time
+ disect_filename
+ xml.etree.ElementTree as xml
+ parser
+ re
+   matplotlib
+   matplotlib.pyplot as plt
+  from matplotlib.gridspec  GridSpec
+  #from mpl_toolkits.mplot3d  axes3d
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ numpy as np
+ sys
+ os
+ parser
+from math  *
+ xml.etree.ElementTree as xml
+ parse_formula
+   matplotlib
+   matplotlib.pyplot as plt
+  from matplotlib.gridspec  GridSpec
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+ disect_filename
+   matplotlib
+   matplotlib.pyplot as plt
+  from matplotlib.gridspec  GridSpec
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+   matplotlib
+   matplotlib.pyplot as plt
+  from matplotlib.gridspec  GridSpec
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+   matplotlib
+   matplotlib.pyplot as plt
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+   matplotlib
+   matplotlib.pyplot as plt
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+ disect_filename
+   matplotlib
+   matplotlib.pyplot as plt
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ numpy as np
+ sys
+ os
+ disect_filename
+ parser
+from math  *
+ xml.etree.ElementTree as xml
+ parse_formula
+ mywarnings
+ warnings
+from myExceptions  *
+  #set  options based on weather it will saved to a file, or sent to x11
+   matplotlib
+   matplotlib.pyplot as plt
+  from matplotlib.gridspec  GridSpec
+# matplotlib
+ optparse as op
+ os
+ math
+ numpy as np
+   matplotlib
+   matplotlib.pyplot as plt
+ sys
+ os
+ optparse as op
+ xml.etree.ElementTree as xml
+ paths
+# subprocess
+ multiprocessing
+ time
+ random
+ mywarnings
+ warnings
+ paths
+ os
+ getopt
+ sys
+ glob
+ optparse as op
+ os
+ xml.etree.ElementTree as xml
+ paths
+ optparse as op
+   argparse
+   optparse as op
+ subprocess
+ os
+ shutil
+ diffDumps
+ paths
+ datetime
+ xml.etree.ElementTree as xml
+ ref_calcs
+   argparse
+   optparse as op
+ subprocess
+ os
+ shutil
+ diffDumps
+ paths
+ ref_calcs
+ datafile
+ optparse as op
+ make_profiles
+ glob
+ math
+ numpy as np
+ sys
+ os
+ disect_filename
+ average_PKE
+ xml.etree.ElementTree as xml
+ warnings
+ mywarnings#imports some custom warning output formating
+ xmlParseFunctions#some commonly used xmlParsing functions
+ matplotlib
+ matplotlib.pyplot as plt
+from matplotlib.gridspec  GridSpec
+ xml.etree.ElementTree as xml
+ warnings
+ mywarnings
