@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#There is no reason to run this as root, and doing would permanatly modify the root users path, which should be avoided.  So exit if root.
+[ $EUID -eq 0 ] && {
+    echo "Error:  This script should not be run with root privileges! Run as normal user to continue. Exiting now."
+    exit
+}
+
 #ensure pip is installed and runnable from command line
 pip --version &> /dev/null || {
     echo "Error: pip python package manager not found.  Install pip using your package manager to continue. Exiting now." 
