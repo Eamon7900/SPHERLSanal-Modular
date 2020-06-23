@@ -32,18 +32,18 @@ grep -q "$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a $SCRIPTS_PAT
 
 
 #install python packages using pip
-#pip install h5py
-#pip install pyevtk
-#pip install eos-py
-#pip install numpy
+pip install h5py
+pip install pyevtk
+pip install eos-py
+pip install numpy
 
 #build modules from source code
-#mkdir bin
-#cd ./src
-#make
-#make clean
-#cd ..
+mkdir bin
+cd ./src
+make
+make clean
+cd ..
 
 #Make working directories
-#mkdir eos
-#mkdir data
+mkdir eos
+mkdir data
