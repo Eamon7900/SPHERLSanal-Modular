@@ -13,27 +13,37 @@ g++ --version &> /dev/null || {
 }
 
 ROOT_DIR=`pwd`
-PATH_EXPORT_CMD="export PATH=\$PATH:$ROOT_DIR/bin/"
+BIN_PATH_EXPORT_CMD="export PATH=\$PATH:$ROOT_DIR/bin/"
+SCRIPTS_PATH_EXPORT_CMD="export PATH=\$PATH:$ROOT_DIR/scripts/"
 
 #if an argument is given, use it as the login profile 
 [ $# -ne 0 ] && PROFILE_FILE=$1 || PROFILE_FILE="$HOME/.profile" 
 
-#If not already added, append SPHERLSanal to path in profile file
-grep -q $PATH_EXPORT_CMD $PROFILE_FILE || sed -i.bak "$ a $PATH_EXPORT_CMD" $PROFILE_FILE 
+#if profile file doesn't exist, create it and append #!/bin/bash to first line
+[ -f $PROFILE_FILE ] || {
+    touch $PROFILE_FILE
+    echo "#!/bin/bash" > $PROFILE_FILE
+}
 
-source $PROFILE_FILE
+#If not already added, append SPHERLSanal to the path in the profile file specified (or ~/.profile by default)
+grep -q "$BIN_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a $BIN_PATH_EXPORT_CMD" $PROFILE_FILE 
+grep -q "$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a $SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE 
+
+
 
 #install python packages using pip
-pip install h5py
-pip install pyevtk
-pip install eos-py
-pip install numpy
+#pip install h5py
+#pip install pyevtk
+#pip install eos-py
+#pip install numpy
 
 #build modules from source code
-cd ./src
-make
-make clean
+#mkdir bin
+#cd ./src
+#make
+#make clean
+#cd ..
 
 #Make working directories
-mkdir eos
-mkdir data
+#mkdir eos
+#mkdir data

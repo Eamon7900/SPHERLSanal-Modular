@@ -1,6 +1,0 @@
-hdf5 library: h5py
-evtk library: pyevtk
-eos library: eos-py
-numpy: numpy
-
--Need to have compiled SPHERLSanal such that make_profile.py can execute it on specified binary files 

@@ -1,6 +1,6 @@
 CC= g++ 
-CFLAGS= -Wall -c
-LFLAGS= -Wall -o
+CFLAGS= -w -c
+LFLAGS= -w -o
 
 EXEC_DIR= ../bin
 
