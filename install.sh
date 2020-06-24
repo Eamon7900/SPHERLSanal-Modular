@@ -6,6 +6,11 @@
     exit
 }
 
+cmake --version &> /dev/null || {
+    echo "Error: cmake not installed.  Install cmake using your package manager to continue.  Exiting now." 
+    exit
+}
+
 #ensure pip is installed and runnable from command line
 pip --version &> /dev/null || {
     echo "Error: pip python package manager not found.  Install pip using your package manager to continue. Exiting now." 

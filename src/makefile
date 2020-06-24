@@ -2,7 +2,7 @@ CC= g++
 CFLAGS= -w -c
 LFLAGS= -w -o
 
-EXEC_DIR= ../bin
+BIN_DIR= ../bin
 
 MK_RAD_PRO_OBJS= mkRadialProfile.o eos.o binfile.o exception2.o
 ALL= mkRadPro 
@@ -10,7 +10,7 @@ ALL= mkRadPro
 all : $(ALL) 
 
 mkRadPro : $(MK_RAD_PRO_OBJS) 
-	$(CC) $(LFLAGS) $(EXEC_DIR)/mkRadPro $(MK_RAD_PRO_OBJS)  
+	$(CC) $(LFLAGS) $(BIN_DIR)/mkRadPro $(MK_RAD_PRO_OBJS)  
 
 mkRadialProfile.o : mkRadialProfile.cpp eos.h binfile.h exception2.h paths.h
 	$(CC) $(CFLAGS) mkRadialProfile.cpp 
