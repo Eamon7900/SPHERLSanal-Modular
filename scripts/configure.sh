@@ -48,13 +48,6 @@ pip install pyevtk
 pip install eos-py
 pip install numpy
 
-#build modules from source code
-mkdir bin
-cd ./src
-make
-make clean
-cd ..
-
 #Make working directories
 mkdir eos
 mkdir data
