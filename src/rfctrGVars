@@ -9,36 +9,36 @@
 OP="!=*+-\)\("
 BEG_REGEX="([[:space:]$OP\[]+)"
 END_REGEX="([]$OP;]+)"
-(sed -E "s/$BEG_REGEX(nM)$END_REGEX/\1bin\.\2\3/g" $1) | 
-sed -E "s/$BEG_REGEX(nTheta)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nPhi)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nDM)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nR)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nD)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nU)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nU0)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nV)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nW)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nE)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nT)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nP)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nQ)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nKappa)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nGamma)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nL_rad)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nL_con)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nKEP)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nKETot)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nC)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nF_con)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nPrecisionAscii)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(bScientific)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(dPi)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(dSigma)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(dLSun)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(nDumpFileVersion)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(bExtraInfoInProfile)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(sEOSFile)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(sExeDir)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/$BEG_REGEX(watchzone)$END_REGEX/\1bin\.\2\3/g" | 
-sed -E "s/bin\.bin/bin/g" > $2 #For some reason NU0 is getting matched twice, so this accounts for any variable that actually gets matched twice. 
+(sed -E "s/$BEG_REGEX(nM)$END_REGEX/\1bin\->\2\3/g" $1) | 
+sed -E "s/$BEG_REGEX(nTheta)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nPhi)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nDM)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nR)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nD)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nU)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nU0)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nV)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nW)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nE)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nT)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nP)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nQ)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nKappa)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nGamma)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nL_rad)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nL_con)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nKEP)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nKETot)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nC)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nF_con)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nPrecisionAscii)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(bScientific)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(dPi)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(dSigma)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(dLSun)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(nDumpFileVersion)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(bExtraInfoInProfile)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(sEOSFile)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(sExeDir)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/$BEG_REGEX(watchzone)$END_REGEX/\1bin\->\2\3/g" | 
+sed -E "s/bin\->bin/bin/g" > $2 #For some reason NU0 is getting matched twice, so this accounts for any variable that actually gets matched twice-> 

@@ -11,9 +11,22 @@
 #include <unistd.h>
 
 #include "eos.h"
+#include "binfile.h"
 #include "exception2.h"
 
-eos::eos(){//empty constructor
+eos::eos(){
+  nNumT=0;
+  nNumRho=0;
+  dLogP=NULL;
+  dLogE=NULL;
+  dLogKappa=NULL;
+  setExePath();
+}
+
+eos::eos(std::string fileName)
+: BinaryFile(fileName)
+{//empty constructor
+
   nNumT=0;
   nNumRho=0;
   dLogP=NULL;
@@ -57,7 +70,9 @@ eos& eos::operator=(const eos & rhs){//assignment operator
   }
   return *this;
 }
-eos::eos(const eos &ref){//copy constructor
+eos::eos(std::string fileName, const eos &ref)
+: BinaryFile(fileName)
+{//copy constructor
   nNumRho=ref.nNumRho;
   nNumT=ref.nNumT;
   dXMassFrac=ref.dXMassFrac;
@@ -90,7 +105,7 @@ eos::~eos(){//destructor
   delete [] dLogE;
   delete [] dLogKappa;
 }
-void eos::readAscii(std::string sFileName)throw(exception2){
+void eos::readAscii()throw(exception2){
   
   //open file
   std::ifstream ifIn;
@@ -150,7 +165,7 @@ void eos::readAscii(std::string sFileName)throw(exception2){
   
   ifIn.close();
 }
-void eos::readBobsAscii(std::string sFileName)throw(exception2){
+void eos::readBobsAscii()throw(exception2){
   
   //open file
   std::ifstream ifIn;
@@ -203,7 +218,7 @@ void eos::readBobsAscii(std::string sFileName)throw(exception2){
   }
   ifIn.close();
 }
-void eos::writeAscii(std::string sFileName)throw(exception2){
+void eos::writeAscii()throw(exception2){
   
   //open file
   std::ofstream ofOut;
@@ -228,7 +243,7 @@ void eos::writeAscii(std::string sFileName)throw(exception2){
   }
   ofOut.close();
 }
-void eos::readBin(std::string sFileName)throw(exception2){
+void eos::readBin()throw(exception2){
   
   //test to see if it is relative to the executable directory
   std::string sTemp;
@@ -296,7 +311,7 @@ void eos::readBin(std::string sFileName)throw(exception2){
   }
   ifIn.close();
 }
-void eos::writeBin(std::string sFileName)throw(exception2){
+void eos::writeBin()throw(exception2){
   
   //open file
   std::ofstream ofOut;

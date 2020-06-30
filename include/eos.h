@@ -8,7 +8,12 @@
 
 #include <string>
 #include "exception2.h"
-class eos{
+
+/*
+sometimes the eos is a binary file, sometimes the eos is part of a binary file.  Because of this, the inheritence 
+here is a little dodgy but its important for code re-usability between the DataFile and eos classes.
+*/
+class eos : public BinaryFile{ 
   public:
     
     //member variables
@@ -56,12 +61,13 @@ class eos{
       contains the path to the current executable, used for making equation of 
       state file paths relative to it.
       */
-    
+
     //member functions
-    eos();/**<
+    eos(); //Default constructor for eos that is part of binary file 
+    eos(std::string fileName);/**<
       Constructor, doesn't really do anything
       */
-    eos(int nNumT,int nNumRho);/**<
+    eos(std::string fileName, int nNumT,int nNumRho);/**<
       Constructor, allocates memory for the 2D arrays
       
       @param[in] nNumT number of temperatures in the equaiton of state table
@@ -70,7 +76,7 @@ class eos{
       Note: I don't think this version of the constructor is implemented,
       I should probably get rid of this definition
       */
-    eos(const eos &ref);/**<
+    eos(std::string fileName, const eos &ref);/**<
       Copy constructor, simply constructs a new eos object from another eos object
       */
     ~eos();/**<
@@ -82,26 +88,26 @@ class eos{
     void setExePath();/**<
       Sets the path of the current executable, used for relative eos file paths
       */
-    void readAscii(std::string sFileName)throw(exception2);/**<
+    void readAscii()throw(exception2);/**<
       This fuction reads in an ascii file and stores it in the current object.
       
       @param[in] sFileName name of the equation of state file to read from.
       */
-    void readBobsAscii(std::string sFileName)throw(exception2);/**<
+    void readBobsAscii()throw(exception2);/**<
       This fuction reads in an ascii file and stores it in the current object. The ascii file is in 
       Bob's format.
       
       @param[in] sFileName name of the equation of state file to read from.
       */
-    void writeAscii(std::string sFileName)throw(exception2);/**<
+    void writeAscii()throw(exception2);/**<
       This fuction writes the equation of state stored in the current object to an ascii file.
       @param[in] sFileName name of the file to write the equation of state to.
       */
-    void readBin(std::string sFileName)throw(exception2);/**<
+    void readBin()throw(exception2);/**<
       This fuction reads in a binary file and stores it in the current object.
       @param[in] sFileName name of the equation of state file to read from.
       */
-    void writeBin(std::string sFileName)throw(exception2);/**<
+    void writeBin()throw(exception2);/**<
       This fuction writes the equation of state stored in the current object to a binary file.
       @param[in] sFileName name of the file to write the equaiton of state to.
       */

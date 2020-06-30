@@ -18,8 +18,9 @@ CFLAGS= -w -c -I./$(INC)
 LFLAGS= -w -o 
 
 MK_RAD_PRO_OBJS= $(OBJ)mkRadialProfile.o $(OBJ)eos.o $(OBJ)binfile.o $(OBJ)exception2.o
+MK_2D_SLICE_OBJS= $(OBJ)mk2DSlice.o $(OBJ)eos.o $(OBJ)binfile.o $(OBJ)exception2.o
 
-TARGS= $(BIN)mkRadPro 
+TARGS= $(BIN)mkRadPro $(BIN)mk2DSlice 
 
 #Phony targets:
 .PHONY= all install dirs clean uninstall
@@ -40,6 +41,12 @@ uninstall : clean
 #Targets and dependancies
 $(BIN)mkRadPro : $(MK_RAD_PRO_OBJS) 
 	$(CC) $(LFLAGS) $(BIN)mkRadPro $(MK_RAD_PRO_OBJS)  
+
+$(BIN)mk2DSlice : $(MK_2D_SLICE_OBJS) 
+	$(CC) $(LFLAGS) $(BIN)mk2DSlice $(MK_2D_SLICE_OBJS)  
+
+$(OBJ)mk2DSlice.o : mk2DSlice.cpp eos.h binfile.h
+	$(CC) $(CFLAGS) $(SRC)mk2DSlice.cpp -o $@ 
 
 $(OBJ)mkRadialProfile.o : mkRadialProfile.cpp eos.h binfile.h exception2.h paths.h
 	$(CC) $(CFLAGS) $(SRC)mkRadialProfile.cpp -o $@ 

@@ -9,9 +9,9 @@
 #include "exception2.h"
 #include "binfile.h"
 #include "paths.h"
+#include "datafile.h"
 
-string rangeToGlob(string range);
-void makeRadialProFromColBin(BinaryFile* bin);
+void makeRadialProFromColBin(DataFile* bin);
 
 using namespace std;
 //Creates a radial profile from a ColBin file.
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]){
       string fname = baseFileName + trailingDigits + to_string(i);
       ifstream testFile(fname);
       if(testFile.good()){ //If the file exists make a radial profile with it
-        BinaryFile* curBin = new BinaryFile(fname);
+        DataFile* curBin = new DataFile(fname);
         curBin->sEOSFile = eosFile;
         curBin->bExtraInfoInProfile = extraInfo;
         cout << "Creating radial profile for: " << fname << endl;
@@ -105,13 +105,13 @@ int main(int argc, char* argv[]){
   return 0;
 }
 
-void makeRadialProFromColBin(BinaryFile* bin){//updated
+void makeRadialProFromColBin(DataFile* bin){//updated
   //open input file
-  std::string sExtension=bin->fileName.substr(bin->fileName.size()-4,1);
+  std::string sExtension=bin->sFileName.substr(bin->sFileName.size()-4,1);
   if(sExtension.compare(".")==0){//if there is an extension remove it
-    bin->fileName=bin->fileName.substr(0,bin->fileName.size()-4);
+    bin->sFileName=bin->sFileName.substr(0,bin->sFileName.size()-4);
   }
-  if(bin->fileName.size()==0){
+  if(bin->sFileName.size()==0){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__
       <<": no input file specified\n";
@@ -119,11 +119,11 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
   }
 
   std::ifstream ifFile; 
-  ifFile.open(bin->fileName.c_str(),std::ios::binary);
+  ifFile.open(bin->sFileName.c_str(),std::ios::binary);
   if(!ifFile.good()){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->fileName<<"\" didn't open properly\n";
+      <<bin->sFileName<<"\" didn't open properly\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
@@ -133,7 +133,7 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
   if(cTemp!='b'){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->fileName<<"\" isn't a binary file.\n";
+      <<bin->sFileName<<"\" isn't a binary file.\n";
     throw exception2(ssTemp.str(),INPUT); 
   }
   
@@ -143,7 +143,7 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
   if(nTemp!=bin->nDumpFileVersion){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": inpput file \""
-      <<bin->fileName<<"\" version \""<<nTemp
+      <<bin->sFileName<<"\" version \""<<nTemp
       <<"\" isn't the supported version \""<<bin->nDumpFileVersion<<"\".\n";
     throw exception2(ssTemp.str(),INPUT);
   }
@@ -174,9 +174,10 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
   
   double dGamma;
   std::string sEOSTable;
-  eos eosTable;
+  eos* eosTable;
   if(nGammaLaw==0){
     ifFile.read((char*)(&dGamma),sizeof(double));
+    eosTable = new eos();
   }
   else{
     char *cBuffer=new char[nGammaLaw+1];
@@ -192,18 +193,18 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
     //set the exe directory
     bin->setExeDir();
     
-    //test to see if it is relative to the execuatable directory
-    std::string sTemp;
+    //test to see if sEOSTable is relative to the execuatable directory
+    std::string eosFileName;
     if (sEOSTable.substr(0,1)!="/" && sEOSTable.substr(0,2)!="./" && sEOSTable.substr(0,1)!="~"){
-      
       //if absolute path not specified, assume EOS file is in eos folder. 
-      sTemp=bin->sExeDir+PATHS::EOS+sEOSTable;
+      eosFileName=bin->sExeDir+PATHS::EOS+sEOSTable;
     }
     else{
-      sTemp=sEOSTable;
+      eosFileName=sEOSTable;
     }
-    
-    eosTable.readBin(sTemp); 
+
+    eosTable = new eos(eosFileName); 
+    eosTable->readBin(); 
   }
   
   //read in artificial viscosity
@@ -739,8 +740,8 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
     for(i=0;i<nSizeX1;i++){//find average max, and min in 1D region
       
       //get P,E,Kappa,Gamma
-      eosTable.getPEKappaGamma(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP_i,dE_i,dKappa_i,dGamma_i);
-      eosTable.getPEKappaGamma(dGrid[bin->nT][i+1][0][0],dGrid[bin->nD][i+1][0][0],dP_ip1,dE_ip1,dKappa_ip1
+      eosTable->getPEKappaGamma(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP_i,dE_i,dKappa_i,dGamma_i);
+      eosTable->getPEKappaGamma(dGrid[bin->nT][i+1][0][0],dGrid[bin->nD][i+1][0][0],dP_ip1,dE_ip1,dKappa_ip1
         ,dGamma_ip1);
       
       //calculate Q
@@ -943,10 +944,10 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
           }
           
           //get P,E,Kappa,Gamma, calculate luminosity from cell and add to sum
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP_i,dE_i,dKappa_i
+          eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP_i,dE_i,dKappa_i
             ,dGamma_i,dCp_i);
           if(i<nSizeX2-1){
-            eosTable.getPEKappaGammaCp(dGrid[bin->nT][i+1][j][k],dGrid[bin->nD][i+1][j][k],dP_ip1,dE_ip1
+            eosTable->getPEKappaGammaCp(dGrid[bin->nT][i+1][j][k],dGrid[bin->nD][i+1][j][k],dP_ip1,dE_ip1
               ,dKappa_ip1,dGamma_ip1,dCp_ip1);
             dT4_i=pow(dGrid[bin->nT][i][j][k],4);
             dT4_ip1=pow(dGrid[bin->nT][i+1][j][k],4);
@@ -1459,13 +1460,13 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
   }
   
   //open output file
-  std::string fileNameOut=bin->fileName+"_pro.txt";
+  std::string sFileNameOut=bin->sFileName+"_pro.txt";
   std::ofstream ofFile;
-  ofFile.open(fileNameOut.c_str());
+  ofFile.open(sFileNameOut.c_str());
   if(!ofFile.good()){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": output file \""
-      <<fileNameOut<<" didn't open properly\n";
+      <<sFileNameOut<<" didn't open properly\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
@@ -1581,7 +1582,7 @@ void makeRadialProFromColBin(BinaryFile* bin){//updated
     double dDlnPDlnT;
     double dDlnPDlnRho;
     double dDEDT;
-    eosTable.getDlnPDlnTDlnPDlnPDEDT(dAve[bin->nT][i],dAve[bin->nD][i],dDlnPDlnT,dDlnPDlnRho,dDEDT);
+    eosTable->getDlnPDlnTDlnPDlnPDEDT(dAve[bin->nT][i],dAve[bin->nD][i],dDlnPDlnT,dDlnPDlnRho,dDEDT);
     
     nMaxJIndex[bin->nP][i]=0;
     nMaxKIndex[bin->nP][i]=0;
