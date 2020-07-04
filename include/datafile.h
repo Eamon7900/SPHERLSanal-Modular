@@ -1,5 +1,6 @@
-#ifndef BINFILE_H
-#define BINFILE_H
+#ifndef DATAFILE_H
+#define DATAFILE_H
+
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -18,7 +19,7 @@
 
 using std::string;
 
-class DataFile : public BinaryFile{
+class DataFile : public BinaryFile {
   /**These should all be private, but I decided to leave them public for the sake of readabability
   because they are accessed frequently in the main source files.
   */

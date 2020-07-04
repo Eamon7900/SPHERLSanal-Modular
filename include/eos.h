@@ -7,15 +7,16 @@
 */
 
 #include <string>
-#include "exception2.h"
+#include <iostream>
 
+#include "exception2.h"
+#include "binfile.h"
 /*
 sometimes the eos is a binary file, sometimes the eos is part of a binary file.  Because of this, the inheritence 
 here is a little dodgy but its important for code re-usability between the DataFile and eos classes.
 */
-class eos : public BinaryFile{ 
+class eos : public BinaryFile { 
   public:
-    
     //member variables
     int nNumRho;/**<
       Number of densities in the equation of state table

@@ -4,26 +4,27 @@
 #include <string.h>
 
 #include "binfile.h"
+#include "datafile.h"
 #include "eos.h"
 int main(int argc, char** argv){
 }
-void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
+void make2DSlice(DataFile *bin, int nPlane,int nPlaneIndex){//updated
   
   int nWidthOutputField=25;
   
   //open input file
-  if(bin->fileName.size()==0){
+  if(bin->sFileName.size()==0){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__
       <<": no input file specified\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   std::ifstream ifFile;
-  ifFile.open(bin->fileName.c_str(),std::ios::binary);
+  ifFile.open(bin->sFileName.c_str(),std::ios::binary);
   if(!ifFile.good()){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->fileName<<"\" didn't open properly\n";
+      <<bin->sFileName<<"\" didn't open properly\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
@@ -33,7 +34,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   if(cTemp!='b'){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->fileName<<"\" isn't a binary file.\n";
+      <<bin->sFileName<<"\" isn't a binary file.\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
@@ -43,7 +44,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   if(nTemp!=bin->nDumpFileVersion){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": inpput file \""
-      <<bin->fileName<<"\" version \""<<nTemp
+      <<bin->sFileName<<"\" version \""<<nTemp
       <<"\" isn't the supported version \""<<bin->nDumpFileVersion<<"\".\n";
     throw exception2(ssTemp.str(),INPUT);
   }
@@ -76,7 +77,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   
   double dGamma;
   std::string sEOSTable;
-  eos eosTable;
+  eos *eosTable;
   if(nGammaLaw==0){
     ifFile.read((char*)(&dGamma),sizeof(double));
   }
@@ -89,7 +90,8 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
     if(bin->sEOSFile!=""){//overwrite sEOSTable if sEOSFile is set
       sEOSTable=bin->sEOSFile;
     }
-    eosTable.readBin(sEOSTable);
+    eosTable = new eos(sEOSTable);
+    eosTable->readBin();
   }
   
   //read in artificial viscosity
@@ -361,7 +363,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   std::stringstream fileNameOut;
   if(nPlane==0){//r-theta plane
     if(nPlaneIndex>=0&&nPlaneIndex<nSize1){
-      fileNameOut<<bin->fileName<<"_2Dk="<<nPlaneIndex<<".txt";
+      fileNameOut<<bin->sFileName<<"_2Dk="<<nPlaneIndex<<".txt";
     }
     else{
       std::stringstream ssTemp;
@@ -372,7 +374,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   }
   else if(nPlane==1){//theta-phi plane
     if(nPlaneIndex>nNum1DZones+nNumGhostCells&&nPlaneIndex<nSize0){
-      fileNameOut<<bin->fileName<<"_2Di="<<nPlaneIndex<<".txt";
+      fileNameOut<<bin->sFileName<<"_2Di="<<nPlaneIndex<<".txt";
     }
     else{
       std::stringstream ssTemp;
@@ -384,7 +386,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
   }
   else if(nPlane==2){//phi-r plane
     if(nPlaneIndex>=0&&nPlaneIndex<nSize2){
-      fileNameOut<<bin->fileName<<"_2Dj="<<nPlaneIndex<<".txt";
+      fileNameOut<<bin->sFileName<<"_2Dj="<<nPlaneIndex<<".txt";
     }
     else{
       std::stringstream ssTemp;
@@ -583,7 +585,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
         if(nGammaLaw!=0){//set P,E,kappa,gamma, Q, and L
           
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP,dE,dKappa,dGamma,dCp);
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP,dE,dKappa,dGamma,dCp);
           
           //calculate Q
           dC=sqrt(dGamma*dP/dGrid[bin->nD][i][0][0]);
@@ -702,7 +704,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
           dA_j=sin(dTheta_j);
           
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][j][nPlaneIndex],dGrid[bin->nD][i][j][nPlaneIndex],dP
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][nPlaneIndex],dGrid[bin->nD][i][j][nPlaneIndex],dP
             ,dE,dKappa,dGamma,dCp);
           
           //calculate Q
@@ -912,7 +914,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
           <<std::setw(nWidthOutputField)<<(dGrid[bin->nD][i][j][nPlaneIndex]-dDAve)/dDAve;//5
         if(nGammaLaw!=0){
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][j][nPlaneIndex],dGrid[bin->nD][i][j][nPlaneIndex],dP
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][nPlaneIndex],dGrid[bin->nD][i][j][nPlaneIndex],dP
             ,dE,dKappa,dGamma,dCp);
           
           //calculate Q, uses dGamma
@@ -1252,7 +1254,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
         for(int k=0;k<nSizeZ;k++){
           
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP,dE,dKappa,dGamma,dCp);
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP,dE,dKappa,dGamma,dCp);
           
           //calculate Q
           dC=sqrt(dGamma*dP/dGrid[bin->nD][i][j][k]);
@@ -1465,7 +1467,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
         if(nGammaLaw!=0){
           
           //get P,E,Kappa,Gamma, calculate luminosity from cell and add to sum
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP,dE,dKappa
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP,dE,dKappa
             ,dGamma,dCp);
           
           //calculate Q
@@ -1792,7 +1794,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
         if(nGammaLaw!=0){//set P,E,kappa,gamma, Q, and L,Cp
           
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP
             ,dE,dKappa,dGamma,dCp);
           
           //calculate Q
@@ -1924,7 +1926,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
         for(int k=0;k<nSizeZ;k++){
           
           //get P, E, kappa, and gamma
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][nPlaneIndex][k],dGrid[bin->nD][i][nPlaneIndex][k],dP
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][nPlaneIndex][k],dGrid[bin->nD][i][nPlaneIndex][k],dP
             ,dE,dKappa,dGamma,dCp);
           
           //calculate Q
@@ -2139,7 +2141,7 @@ void make2DSlice(BinaryFile *bin,int nPlane,int nPlaneIndex){//updated
           <<std::setw(nWidthOutputField)<<(dGrid[bin->nD][i][nPlaneIndex][k]-dDAve)/dDAve;//5
         if(nGammaLaw!=0){
           //get P, E, kappa, and gamma,Cp
-          eosTable.getPEKappaGammaCp(dGrid[bin->nT][i][nPlaneIndex][k],dGrid[bin->nD][i][nPlaneIndex][k],dP
+         eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][nPlaneIndex][k],dGrid[bin->nD][i][nPlaneIndex][k],dP
             ,dE,dKappa,dGamma,dCp);
           
           //calculate Q

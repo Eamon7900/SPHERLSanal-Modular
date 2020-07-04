@@ -24,7 +24,7 @@ eos::eos(){
 }
 
 eos::eos(std::string fileName)
-: BinaryFile(fileName)
+: eos::BinaryFile(fileName)
 {//empty constructor
 
   nNumT=0;
@@ -71,7 +71,7 @@ eos& eos::operator=(const eos & rhs){//assignment operator
   return *this;
 }
 eos::eos(std::string fileName, const eos &ref)
-: BinaryFile(fileName)
+: eos::BinaryFile(fileName)
 {//copy constructor
   nNumRho=ref.nNumRho;
   nNumT=ref.nNumT;

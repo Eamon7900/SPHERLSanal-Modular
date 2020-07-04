@@ -1,4 +1,7 @@
+#ifndef BINFILE_H
+#define BINFILE_H
 
+#include <string>
 
 class BinaryFile {
     protected:
@@ -9,3 +12,5 @@ class BinaryFile {
         std::string sExeName; //The path of the executable which is operating on the binary file
 
 };
+
+#endif

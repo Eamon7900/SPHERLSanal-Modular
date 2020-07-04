@@ -14,11 +14,11 @@ VPATH= $(SRC):$(INC)
 
 #Flags for compile and link commands
 CC= g++ 
-CFLAGS= -w -c -I./$(INC) 
-LFLAGS= -w -o 
+CFLAGS= -Wall -c -I./$(INC) 
+LFLAGS= -Wall -o 
 
-MK_RAD_PRO_OBJS= $(OBJ)mkRadialProfile.o $(OBJ)eos.o $(OBJ)binfile.o $(OBJ)exception2.o
-MK_2D_SLICE_OBJS= $(OBJ)mk2DSlice.o $(OBJ)eos.o $(OBJ)binfile.o $(OBJ)exception2.o
+MK_RAD_PRO_OBJS= $(OBJ)mkRadialProfile.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o
+MK_2D_SLICE_OBJS= $(OBJ)mk2DSlice.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o
 
 TARGS= $(BIN)mkRadPro $(BIN)mk2DSlice 
 
@@ -45,17 +45,20 @@ $(BIN)mkRadPro : $(MK_RAD_PRO_OBJS)
 $(BIN)mk2DSlice : $(MK_2D_SLICE_OBJS) 
 	$(CC) $(LFLAGS) $(BIN)mk2DSlice $(MK_2D_SLICE_OBJS)  
 
+$(OBJ)binfile.o : binfile.h binfile.cpp
+	$(CC) $(CFLAGS) $(SRC)binfile.cpp -o $@ 
+
 $(OBJ)mk2DSlice.o : mk2DSlice.cpp eos.h binfile.h
 	$(CC) $(CFLAGS) $(SRC)mk2DSlice.cpp -o $@ 
 
 $(OBJ)mkRadialProfile.o : mkRadialProfile.cpp eos.h binfile.h exception2.h paths.h
 	$(CC) $(CFLAGS) $(SRC)mkRadialProfile.cpp -o $@ 
 
-$(OBJ)eos.o : eos.cpp eos.h exception2.h
+$(OBJ)eos.o : eos.cpp eos.h binfile.h exception2.h
 	$(CC) $(CFLAGS) $(SRC)eos.cpp -o $@ 
 
-$(OBJ)binfile.o : binfile.cpp binfile.h
-	$(CC) $(CFLAGS) $(SRC)binfile.cpp -o $@ 
+$(OBJ)datafile.o : datafile.h binfile.h datafile.cpp 
+	$(CC) $(CFLAGS) $(SRC)datafile.cpp -o $@ 
 
 $(OBJ)exception2.o : exception2.cpp exception2.h
 	$(CC) $(CFLAGS) $(SRC)exception2.cpp -o $@  

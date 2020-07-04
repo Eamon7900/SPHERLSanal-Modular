@@ -472,10 +472,7 @@ def parseXMLFile(fileName):
         else:#default
           vector['labelYPos']=0.92
       
-        #get text
-        if labelElement.text!=None:
-          vector['label']=labelElement.text
-        else:#use default
+        #get texthttps://github.com/Eamon7900/SPHERLSanal-Modular.git
           vector['label']=""
       else:
         vector['label']=""
