@@ -17,8 +17,8 @@ CC= g++
 CFLAGS= -Wall -c -I./$(INC) 
 LFLAGS= -Wall -o 
 
-MK_RAD_PRO_OBJS= $(OBJ)mkRadialProfile.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o
-MK_2D_SLICE_OBJS= $(OBJ)mk2DSlice.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o
+MK_RAD_PRO_OBJS= $(OBJ)mkRadialProfile.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o $(OBJ)argparser.o
+MK_2D_SLICE_OBJS= $(OBJ)mk2DSlice.o $(OBJ)eos.o $(OBJ)datafile.o $(OBJ)binfile.o $(OBJ)exception2.o $(OBJ)argparser.o
 
 TARGS= $(BIN)mkRadPro $(BIN)mk2DSlice 
 
@@ -51,7 +51,7 @@ $(OBJ)binfile.o : binfile.h binfile.cpp
 $(OBJ)mk2DSlice.o : mk2DSlice.cpp eos.h binfile.h
 	$(CC) $(CFLAGS) $(SRC)mk2DSlice.cpp -o $@ 
 
-$(OBJ)mkRadialProfile.o : mkRadialProfile.cpp eos.h binfile.h exception2.h paths.h
+$(OBJ)mkRadialProfile.o : mkRadialProfile.cpp eos.h binfile.h exception2.h paths.h argparser.h
 	$(CC) $(CFLAGS) $(SRC)mkRadialProfile.cpp -o $@ 
 
 $(OBJ)eos.o : eos.cpp eos.h binfile.h exception2.h
@@ -63,3 +63,5 @@ $(OBJ)datafile.o : datafile.h binfile.h datafile.cpp
 $(OBJ)exception2.o : exception2.cpp exception2.h
 	$(CC) $(CFLAGS) $(SRC)exception2.cpp -o $@  
 
+$(OBJ)argparser.o : argparser.cpp argparser.h
+	$(CC) $(CFLAGS) $(SRC)argparser.cpp -o $@  

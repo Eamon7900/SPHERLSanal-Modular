@@ -21,7 +21,7 @@ import mywarnings
 import warnings
 from myExceptions import *
 
-defaultXML=paths.SPHERLSanalConfig + "plot_profile_default.xml"
+defaultXML=paths.SPHERLSanalConfig + "plot_profile_reference.xml"
 
 def parseOptions():
   #note: newlines are not respected in the optparse description string :(, maybe someday will use
@@ -884,7 +884,7 @@ def main():
   (options,args)=parseOptions()
   
   if len(args)==0:
-    print("No input XML specified, using default XML file: " + defaultXML)
+    print("No input XML specified, using reference XML file: " + defaultXML)
     tree=xml.parse(defaultXML);
   else:
     #get root element

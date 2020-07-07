@@ -21,9 +21,11 @@ import disect_filename
 import xml.etree.ElementTree as xml
 import parser
 import re
+import paths
 
 nNumCoords=7
 colors=['r','g','b','c','m','y']
+defaultXML="plot_2DSlices_reference.xml"
 class File2DSlice:
   def load(self,fileName):
     '''sets:
@@ -126,9 +128,14 @@ def main():
   
   #parse arguments
   parsed=parser.parse_args()
-  
+  XML=parsed.fileName; 
   #get xml settings
-  settings=parseXMLFile(parsed.fileName)
+  if XML[0:1] == "." or XML[0:1] == "/" :  #If an absolute path is given, use it.
+    print("Plotting 2D slices with XML: " + XML)
+    settings=xml.parse(XML);
+  else: #if an absolute path is not given, assume the XML file is in the config directory
+    print("Plotting 2D Slices with XML: " + paths.SPHERLSanalConfig + XML)
+    settings=xml.parse(paths.SPHERLSanalConfig + XML)
   
   #set codes
   setCodes(settings,parsed)
@@ -1055,6 +1062,10 @@ def createPlots(settings,parsed):
     if plane['planeType']=="rp":
       nPlaneID=2
       planeID="j"
+    cmd = 'mk2DSlice' + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex'])+ ' ' + settings['inputFileName'];
+    print(cmd)
+    #success=os.system('mk2DSlice' + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex'])+ ' ' + settings['inputFileName'])
+
     make_2DSlices.make_2DSlices(not(parsed.r),settings['inputFileName'],nPlaneID,plane['planeIndex']
       ,parsed.m)
     

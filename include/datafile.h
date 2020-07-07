@@ -132,10 +132,6 @@ class DataFile : public BinaryFile {
     std::string sEOSFile="";/**<
     path to an equation of state file, used for overriding the path/eos file in the model files.
     */
-    std::string sExeDir;/**<
-    The top level directory containing the executable operating on this binary file lives
-    (This should usually be the root install directory of SPHERLSAnal)
-    */
 
     struct watchzone;
     
@@ -147,9 +143,7 @@ class DataFile : public BinaryFile {
       Calculates a volume weighted average density given the grid varibles, dGrid and the radial
       index, nI, the start and stop indices in the Y and Z direction. For the 2D case.
     */
-    void setExeDir();
     static bool bFileExists(std::string strFilename);
-
 };
 
 struct watchzone{

@@ -55,7 +55,7 @@ p^=-       sin(p)*x^+       cos(p)*y^
     which indicates that all model dumps from "start index" to the last model dump found is 
     included. The frequency option allows one to skip plots. If set to 2 will plot every other file,
     if 3 every third file etc.-->
-  <inputFileName  frequency="1">RRL_HighV_t01680597</inputFileName>
+  <inputFileName  frequency="1">RRL_HighV_t[0-9999999]</inputFileName>
   
   <!-- RT-plane with combined u-u_0 and v vectors, transform: p=0, x->x, z->y-->
   <!-- <plane></plane>

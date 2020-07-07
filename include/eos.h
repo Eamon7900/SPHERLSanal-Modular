@@ -58,10 +58,6 @@ class eos : public BinaryFile {
       \ref eos::dLogRhoMin, and at log10 temperature of \ref eos::dLogTDelta*j
       +\ref eos::dLogTMin.
       */
-    std::string sExePath;/**<
-      contains the path to the current executable, used for making equation of 
-      state file paths relative to it.
-      */
 
     //member functions
     eos(); //Default constructor for eos that is part of binary file 
@@ -85,9 +81,6 @@ class eos : public BinaryFile {
       */
     eos& operator=(const eos & eosRightSide);/**<
       Assignment operator, assigns one eos object to another.
-      */
-    void setExePath();/**<
-      Sets the path of the current executable, used for relative eos file paths
       */
     void readAscii()throw(exception2);/**<
       This fuction reads in an ascii file and stores it in the current object.

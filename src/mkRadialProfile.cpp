@@ -4,16 +4,17 @@
 #include <glob.h>
 #include <string.h>
 #include <regex>
+#include <vector>
 
 #include "eos.h"
 #include "exception2.h"
 #include "binfile.h"
 #include "paths.h"
 #include "datafile.h"
+#include "argparser.h"
 
-void makeRadialProFromColBin(DataFile* bin);
+void makeRadialProFromColBin(DataFile& bin);
 
-using namespace std;
 //Creates a radial profile from a ColBin file.
 int main(int argc, char* argv[]){
   string eosFile="";
@@ -25,93 +26,54 @@ int main(int argc, char* argv[]){
   mkRadPro <fileRange> : argc = 2;
   */
 
-  string baseFileName;
+  string fileRange;
   switch(argc){
     case 4:
-      baseFileName=argv[2];
+      fileRange=argv[2];
       eosFile=argv[3];
       break;
     case 3:
       if(strcmp(argv[1],"-e") == 0){ //no eosFile
         extraInfo=true;
-        baseFileName=argv[2];
+        fileRange=argv[2];
       } else {
-        baseFileName=argv[1]; 
+        fileRange=argv[1]; 
         eosFile=argv[2];
       }
       break;
    case 2:
-     baseFileName = argv[1];
+     fileRange = argv[1];
      break;
   }
-  cout << "creating radial profiles using eos file: " << eosFile << endl;
-  //extract the numerical range of binary files from baseFileName
-  string range;   
-  for(int i = 0; i < baseFileName.length(); i++){
-    if(baseFileName[i] == '['){
-      baseFileName = baseFileName.substr(0, i); //Leave just the base filename
-      ++i;
-      while(baseFileName[i] != ']'){
-        range += baseFileName[i++];  
-      }
-    }
-  }
-  
-  //Truncate any digits from base filename
-  regex digit = regex("[0-9]");
-  string trailingDigits;
-  trailingDigits.reserve(8); //SPHERLS dump file names are typically 8 digits, so this is the maximum number of trailing digits.
-  while(regex_match(baseFileName.substr(baseFileName.length() - 1, baseFileName.length()), digit)){ //While last char is digit
-    trailingDigits += baseFileName[baseFileName.length() - 1];
-    baseFileName = baseFileName.substr(0,baseFileName.length() - 1);
-  }
-  reverse(trailingDigits.begin(), trailingDigits.end());
-  
-  string sLower;
-  sLower.reserve(range.length() / 2);
-  string sUpper;
-  sUpper.reserve(range.length() / 2);
 
-  //Split the range into two substrings:
-  int i = 0;
-  while(range[i] != '-'){
-    sLower+=range[i];
-    i++;
-  }
-  i++;
-  for(;i < range.length(); i++){
-    sUpper+=range[i];
-  }
-  
-  //convert lower and upper bounds of range into integers
-  int lower = stoi(sLower);
-  int upper = stoi(sUpper);
+  ArgParser argParser(fileRange);
+  std::vector<std::string> filesInRange = argParser.getFilesInRange(); 
 
+  if(eosFile!="")
+    std::cout << "creating radial profiles using eos file: " << eosFile << std::endl;
+  //extract the numerical range of binary files from fileRange
+  std::cout << filesInRange.empty() << std::endl;
   //Run through every file in range to check if it exists
-  for(int i = lower; i <= upper; i++){
-      string fname = baseFileName + trailingDigits + to_string(i);
-      ifstream testFile(fname);
-      if(testFile.good()){ //If the file exists make a radial profile with it
-        DataFile* curBin = new DataFile(fname);
-        curBin->sEOSFile = eosFile;
-        curBin->bExtraInfoInProfile = extraInfo;
-        cout << "Creating radial profile for: " << fname << endl;
-        makeRadialProFromColBin(curBin);
-      }
-      testFile.close();
-  }
+  while(!filesInRange.empty()){
+      DataFile curBin(filesInRange.back());
+      filesInRange.pop_back();
 
+      curBin.sEOSFile = eosFile;
+      curBin.bExtraInfoInProfile = extraInfo;
+      std::cout << "Creating rdial profile for: " << curBin.sFileName << std::endl;
+      makeRadialProFromColBin(curBin);
+  }
 
   return 0;
 }
 
-void makeRadialProFromColBin(DataFile* bin){//updated
+void makeRadialProFromColBin(DataFile& bin){//updated
   //open input file
-  std::string sExtension=bin->sFileName.substr(bin->sFileName.size()-4,1);
+  std::string sExtension=bin.sFileName.substr(bin.sFileName.size()-4,1);
   if(sExtension.compare(".")==0){//if there is an extension remove it
-    bin->sFileName=bin->sFileName.substr(0,bin->sFileName.size()-4);
+    bin.sFileName=bin.sFileName.substr(0,bin.sFileName.size()-4);
   }
-  if(bin->sFileName.size()==0){
+  if(bin.sFileName.size()==0){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__
       <<": no input file specified\n";
@@ -119,11 +81,11 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   }
 
   std::ifstream ifFile; 
-  ifFile.open(bin->sFileName.c_str(),std::ios::binary);
+  ifFile.open(bin.sFileName.c_str(),std::ios::binary);
   if(!ifFile.good()){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->sFileName<<"\" didn't open properly\n";
+      <<bin.sFileName<<"\" didn't open properly\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
@@ -133,23 +95,23 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   if(cTemp!='b'){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": input file \""
-      <<bin->sFileName<<"\" isn't a binary file.\n";
+      <<bin.sFileName<<"\" isn't a binary file.\n";
     throw exception2(ssTemp.str(),INPUT); 
   }
   
   //check that it is the correct version
   int nTemp;
   ifFile.read((char*)(&nTemp),sizeof(int));
-  if(nTemp!=bin->nDumpFileVersion){
+  if(nTemp!=bin.nDumpFileVersion){
     std::stringstream ssTemp;
     ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__<<": inpput file \""
-      <<bin->sFileName<<"\" version \""<<nTemp
-      <<"\" isn't the supported version \""<<bin->nDumpFileVersion<<"\".\n";
+      <<bin.sFileName<<"\" version \""<<nTemp
+      <<"\" isn't the supported version \""<<bin.nDumpFileVersion<<"\".\n";
     throw exception2(ssTemp.str(),INPUT);
   }
   
   //read in time
-  double dTime;
+  double dTime;;
   ifFile.read((char*)(&dTime),sizeof(double));
   
   //read in the time step index
@@ -186,18 +148,16 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     sEOSTable=cBuffer;
     delete [] cBuffer;
     
-    if(bin->sEOSFile!=""){//overwrite sEOSTable if sEOSFile is set
-      sEOSTable=bin->sEOSFile;
+    if(bin.sEOSFile!=""){//overwrite sEOSTable if sEOSFile is set
+      sEOSTable=bin.sEOSFile;
     }
     
     //set the exe directory
-    bin->setExeDir();
-    
     //test to see if sEOSTable is relative to the execuatable directory
     std::string eosFileName;
     if (sEOSTable.substr(0,1)!="/" && sEOSTable.substr(0,2)!="./" && sEOSTable.substr(0,1)!="~"){
       //if absolute path not specified, assume EOS file is in eos folder. 
-      eosFileName=bin->sExeDir+PATHS::EOS+sEOSTable;
+      eosFileName=bin.sRootDir+PATHS::EOS+sEOSTable;
     }
     else{
       eosFileName=sEOSTable;
@@ -276,146 +236,146 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   if(nGammaLaw==0){//using gamma law gas
     if(nNumDims==1){
       nNumIntVars=5;
-      bin->nM=0;
-      bin->nDM=1;
-      bin->nR=2;
-      bin->nD=3;
-      bin->nU=4;
-      bin->nU0=5;
-      bin->nE=6;
-      bin->nP=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nKEP=nNumVars+2;
-      bin->nC=nNumVars+3;
-      bin->nKETot=nNumVars+4;
-      bin->nV=-1;
-      bin->nW=-1;
-      bin->nT=-1;
-      bin->nTheta=-1;
-      bin->nPhi=-1;
-      bin->nKappa=-1;
-      bin->nGamma=-1;
+      bin.nM=0;
+      bin.nDM=1;
+      bin.nR=2;
+      bin.nD=3;
+      bin.nU=4;
+      bin.nU0=5;
+      bin.nE=6;
+      bin.nP=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nKEP=nNumVars+2;
+      bin.nC=nNumVars+3;
+      bin.nKETot=nNumVars+4;
+      bin.nV=-1;
+      bin.nW=-1;
+      bin.nT=-1;
+      bin.nTheta=-1;
+      bin.nPhi=-1;
+      bin.nKappa=-1;
+      bin.nGamma=-1;
     }
     else if(nNumDims==2){
       nNumIntVars=5;
-      bin->nM=0;
-      bin->nTheta=1;
-      bin->nDM=2;
-      bin->nR=3;
-      bin->nD=4;
-      bin->nU=5;
-      bin->nU0=6;
-      bin->nV=7;
-      bin->nE=8;
-      bin->nP=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nKEP=nNumVars+2;
-      bin->nC=nNumVars+3;
-      bin->nKETot=nNumVars+4;
-      bin->nW=-1;
-      bin->nT=-1;
-      bin->nPhi=-1;
-      bin->nKappa=-1;
-      bin->nGamma=-1;
+      bin.nM=0;
+      bin.nTheta=1;
+      bin.nDM=2;
+      bin.nR=3;
+      bin.nD=4;
+      bin.nU=5;
+      bin.nU0=6;
+      bin.nV=7;
+      bin.nE=8;
+      bin.nP=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nKEP=nNumVars+2;
+      bin.nC=nNumVars+3;
+      bin.nKETot=nNumVars+4;
+      bin.nW=-1;
+      bin.nT=-1;
+      bin.nPhi=-1;
+      bin.nKappa=-1;
+      bin.nGamma=-1;
     }
     else if(nNumDims==3){
       nNumIntVars=5;
-      bin->nM=0;
-      bin->nTheta=1;
-      bin->nPhi=2;
-      bin->nDM=3;
-      bin->nR=4;
-      bin->nD=5;
-      bin->nU=6;
-      bin->nU0=7;
-      bin->nV=8;
-      bin->nW=9;
-      bin->nE=10;
-      bin->nP=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nKEP=nNumVars+2;
-      bin->nC=nNumVars+3;
-      bin->nKETot=nNumVars+4;
-      bin->nT=-1;
-      bin->nKappa=-1;
-      bin->nGamma=-1;
+      bin.nM=0;
+      bin.nTheta=1;
+      bin.nPhi=2;
+      bin.nDM=3;
+      bin.nR=4;
+      bin.nD=5;
+      bin.nU=6;
+      bin.nU0=7;
+      bin.nV=8;
+      bin.nW=9;
+      bin.nE=10;
+      bin.nP=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nKEP=nNumVars+2;
+      bin.nC=nNumVars+3;
+      bin.nKETot=nNumVars+4;
+      bin.nT=-1;
+      bin.nKappa=-1;
+      bin.nGamma=-1;
     }
   }
   else{//using a tabulated equation of state
     if(nNumDims==1){
       nNumIntVars=11;
-      bin->nM=0;
-      bin->nDM=1;
-      bin->nR=2;
-      bin->nD=3;
-      bin->nU=4;
-      bin->nU0=5;
-      bin->nT=6;
-      bin->nE=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nP=nNumVars+2;
-      bin->nKappa=nNumVars+3;
-      bin->nGamma=nNumVars+4;
-      bin->nL_rad=nNumVars+5;
-      bin->nL_con=nNumVars+6;
-      bin->nF_con=nNumVars+7;
-      bin->nKEP=nNumVars+8;
-      bin->nC=nNumVars+9;
-      bin->nKETot=nNumVars+10;
-      bin->nV=-1;
-      bin->nW=-1;
-      bin->nTheta=-1;
-      bin->nPhi=-1;
+      bin.nM=0;
+      bin.nDM=1;
+      bin.nR=2;
+      bin.nD=3;
+      bin.nU=4;
+      bin.nU0=5;
+      bin.nT=6;
+      bin.nE=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nP=nNumVars+2;
+      bin.nKappa=nNumVars+3;
+      bin.nGamma=nNumVars+4;
+      bin.nL_rad=nNumVars+5;
+      bin.nL_con=nNumVars+6;
+      bin.nF_con=nNumVars+7;
+      bin.nKEP=nNumVars+8;
+      bin.nC=nNumVars+9;
+      bin.nKETot=nNumVars+10;
+      bin.nV=-1;
+      bin.nW=-1;
+      bin.nTheta=-1;
+      bin.nPhi=-1;
     }
     else if(nNumDims==2){
       nNumIntVars=11;
-      bin->nM=0;
-      bin->nTheta=1;
-      bin->nDM=2;
-      bin->nR=3;
-      bin->nD=4;
-      bin->nU=5;
-      bin->nU0=6;
-      bin->nV=7;
-      bin->nT=8;
-      bin->nE=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nP=nNumVars+2;
-      bin->nKappa=nNumVars+3;
-      bin->nGamma=nNumVars+4;
-      bin->nL_rad=nNumVars+5;
-      bin->nL_con=nNumVars+6;
-      bin->nF_con=nNumVars+7;
-      bin->nKEP=nNumVars+8;
-      bin->nC=nNumVars+9;
-      bin->nKETot=nNumVars+10;
-      bin->nPhi=-1;
-      bin->nW=-1;
+      bin.nM=0;
+      bin.nTheta=1;
+      bin.nDM=2;
+      bin.nR=3;
+      bin.nD=4;
+      bin.nU=5;
+      bin.nU0=6;
+      bin.nV=7;
+      bin.nT=8;
+      bin.nE=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nP=nNumVars+2;
+      bin.nKappa=nNumVars+3;
+      bin.nGamma=nNumVars+4;
+      bin.nL_rad=nNumVars+5;
+      bin.nL_con=nNumVars+6;
+      bin.nF_con=nNumVars+7;
+      bin.nKEP=nNumVars+8;
+      bin.nC=nNumVars+9;
+      bin.nKETot=nNumVars+10;
+      bin.nPhi=-1;
+      bin.nW=-1;
     }
     else if(nNumDims==3){
       nNumIntVars=11;
-      bin->nM=0;
-      bin->nTheta=1;
-      bin->nPhi=2;
-      bin->nDM=3;
-      bin->nR=4;
-      bin->nD=5;
-      bin->nU=6;
-      bin->nU0=7;
-      bin->nV=8;
-      bin->nW=9;
-      bin->nT=10;
-      bin->nE=nNumVars+0;
-      bin->nQ=nNumVars+1;
-      bin->nP=nNumVars+2;
-      bin->nKappa=nNumVars+3;
-      bin->nGamma=nNumVars+4;
-      bin->nL_rad=nNumVars+5;
-      bin->nL_con=nNumVars+6;
-      bin->nF_con=nNumVars+7;
-      bin->nKEP=nNumVars+8;
-      bin->nC=nNumVars+9;
-      bin->nKETot=nNumVars+10;
+      bin.nM=0;
+      bin.nTheta=1;
+      bin.nPhi=2;
+      bin.nDM=3;
+      bin.nR=4;
+      bin.nD=5;
+      bin.nU=6;
+      bin.nU0=7;
+      bin.nV=8;
+      bin.nW=9;
+      bin.nT=10;
+      bin.nE=nNumVars+0;
+      bin.nQ=nNumVars+1;
+      bin.nP=nNumVars+2;
+      bin.nKappa=nNumVars+3;
+      bin.nGamma=nNumVars+4;
+      bin.nL_rad=nNumVars+5;
+      bin.nL_con=nNumVars+6;
+      bin.nF_con=nNumVars+7;
+      bin.nKEP=nNumVars+8;
+      bin.nC=nNumVars+9;
+      bin.nKETot=nNumVars+10;
     }
   }
   
@@ -576,40 +536,40 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   
   //allocate space for internal variables
   for(int n=nNumVars;n<nNumVars+nNumIntVars;n++){
-    dMax[n]=new double[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    dMin[n]=new double[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    dAve[n]=new double[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    nMaxJIndex[n]=new int[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    nMaxKIndex[n]=new int[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    nMinJIndex[n]=new int[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
-    nMinKIndex[n]=new int[nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells];
+    dMax[n]=new double[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    dMin[n]=new double[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    dAve[n]=new double[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    nMaxJIndex[n]=new int[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    nMaxKIndex[n]=new int[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    nMinJIndex[n]=new int[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
+    nMinKIndex[n]=new int[nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells];
   }
   
   //calculate filling factor for upflow
   nGhostCellsX=1;
-  if(nVarInfo[bin->nU][0]==-1){
+  if(nVarInfo[bin.nU][0]==-1){
     nGhostCellsX=0;
   }
   nGhostCellsY=1;
-  if(nVarInfo[bin->nU][1]==-1){
+  if(nVarInfo[bin.nU][1]==-1){
     nGhostCellsY=0;
   }
   nGhostCellsZ=1;
-  if(nVarInfo[bin->nU][2]==-1){
+  if(nVarInfo[bin.nU][2]==-1){
     nGhostCellsZ=0;
   }
   nSizeX1=nGhostCellsX*(nNum1DZones+nNumGhostCells);
-  if (nVarInfo[bin->nU][0]==1&&nPeriodic[0]==0){
+  if (nVarInfo[bin.nU][0]==1&&nPeriodic[0]==0){
     nSizeX1=nGhostCellsX*(nNum1DZones+1+nNumGhostCells);
   }
-  nSizeX2=nSize[bin->nU][0]+nGhostCellsX*2*nNumGhostCells;
-  nSizeY=nSize[bin->nU][1]+nGhostCellsY*2*nNumGhostCells;
-  nSizeZ=nSize[bin->nU][2]+nGhostCellsZ*2*nNumGhostCells;
+  nSizeX2=nSize[bin.nU][0]+nGhostCellsX*2*nNumGhostCells;
+  nSizeY=nSize[bin.nU][1]+nGhostCellsY*2*nNumGhostCells;
+  nSizeZ=nSize[bin.nU][2]+nGhostCellsZ*2*nNumGhostCells;
   nStartY=nGhostCellsY*nNumGhostCells;
-  nEndY=nSize[bin->nU][1]+nStartY;
+  nEndY=nSize[bin.nU][1]+nStartY;
   nStartZ=nGhostCellsZ*nNumGhostCells;
-  nEndZ=nSize[bin->nU][2]+nStartZ;
-  double *dUpFlowFillingFactor=new double[nSize[bin->nU][0]+nGhostCellsX*2
+  nEndZ=nSize[bin.nU][2]+nStartZ;
+  double *dUpFlowFillingFactor=new double[nSize[bin.nU][0]+nGhostCellsX*2
     *nNumGhostCells];
   for(int i=0;i<nSizeX1;i++){
     dUpFlowFillingFactor[i]=0.0;//no-upflow in 1D part
@@ -621,7 +581,7 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       for(int k=nStartZ;k<nEndZ;k++){
         
         //if there is an up-flow (removing flow due to pulsation)
-        if(dGrid[bin->nU][i][j][k]-dGrid[bin->nU0][i][0][0]>0.0){
+        if(dGrid[bin.nU][i][j][k]-dGrid[bin.nU0][i][0][0]>0.0){
           nCountUp++;
         }
         nCountTotal++;
@@ -638,16 +598,16 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     
     //allocate space
     nGhostCellsX=1;
-    if(nVarInfo[bin->nD][0]==-1){/*all internal variables are centred quantities, will be the same as 
+    if(nVarInfo[bin.nD][0]==-1){/*all internal variables are centred quantities, will be the same as 
       the density*/
       nGhostCellsX=0;
     }
     nGhostCellsY=1;
-    if(nVarInfo[bin->nD][1]==-1){
+    if(nVarInfo[bin.nD][1]==-1){
       nGhostCellsY=0;
     }
     nGhostCellsZ=1;
-    if(nVarInfo[bin->nD][2]==-1){
+    if(nVarInfo[bin.nD][2]==-1){
       nGhostCellsZ=0;
     }
     
@@ -732,7 +692,7 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     //set 1D part of the grid
     nSizeX1=nGhostCellsX*(nNum1DZones+nNumGhostCells);/*maybe need to +1 if only one proc and 
       variable is interface centered*/
-    if (nVarInfo[bin->nD][0]==1&&nPeriodic[0]==0){
+    if (nVarInfo[bin.nD][0]==1&&nPeriodic[0]==0){
       nSizeX1=nGhostCellsX*(nNum1DZones+1+nNumGhostCells);
     }
     nSizeY=1;
@@ -740,22 +700,22 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     for(i=0;i<nSizeX1;i++){//find average max, and min in 1D region
       
       //get P,E,Kappa,Gamma
-      eosTable->getPEKappaGamma(dGrid[bin->nT][i][0][0],dGrid[bin->nD][i][0][0],dP_i,dE_i,dKappa_i,dGamma_i);
-      eosTable->getPEKappaGamma(dGrid[bin->nT][i+1][0][0],dGrid[bin->nD][i+1][0][0],dP_ip1,dE_ip1,dKappa_ip1
+      eosTable->getPEKappaGamma(dGrid[bin.nT][i][0][0],dGrid[bin.nD][i][0][0],dP_i,dE_i,dKappa_i,dGamma_i);
+      eosTable->getPEKappaGamma(dGrid[bin.nT][i+1][0][0],dGrid[bin.nD][i+1][0][0],dP_ip1,dE_ip1,dKappa_ip1
         ,dGamma_ip1);
       
       //calculate Q
-      dR_i=(dGrid[bin->nR][i+1][0][0]+dGrid[bin->nR][i][0][0])*0.5;
+      dR_i=(dGrid[bin.nR][i+1][0][0]+dGrid[bin.nR][i][0][0])*0.5;
       dRSq_i=dR_i*dR_i;
-      dA_ip1half=dGrid[bin->nR][i+1][0][0]*dGrid[bin->nR][i+1][0][0];
-      dA_im1half=dGrid[bin->nR][i][0][0]*dGrid[bin->nR][i][0][0];
-      dC=sqrt(dGamma_i*dP_i/dGrid[bin->nD][i][0][0]);
+      dA_ip1half=dGrid[bin.nR][i+1][0][0]*dGrid[bin.nR][i+1][0][0];
+      dA_im1half=dGrid[bin.nR][i][0][0]*dGrid[bin.nR][i][0][0];
+      dC=sqrt(dGamma_i*dP_i/dGrid[bin.nD][i][0][0]);
       dDVDtThreshold=dAVThreshold*dC;
-      dDVDt=(dA_ip1half*dGrid[bin->nU][i+1][0][0]
-        -dA_im1half*dGrid[bin->nU][i][0][0])/dRSq_i;
+      dDVDt=(dA_ip1half*dGrid[bin.nU][i+1][0][0]
+        -dA_im1half*dGrid[bin.nU][i][0][0])/dRSq_i;
       if(dDVDt<-1.0*dDVDtThreshold){//being compressed
         dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-        dQ=dASq*dGrid[bin->nD][i][0][0]*dDVDt_mthreshold*dDVDt_mthreshold;
+        dQ=dASq*dGrid[bin.nD][i][0][0]*dDVDt_mthreshold*dDVDt_mthreshold;
       }
       else{
         dQ=0.0;
@@ -763,85 +723,85 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       
       //calculate luminosity from cell and add to sum
       dLSum_rad=0.0;
-      dArea=dA_ip1half*4.0*bin->dPi;
-      dT4_i=pow(dGrid[bin->nT][i][0][0],4);
-      dT4_ip1=pow(dGrid[bin->nT][i+1][0][0],4);
+      dArea=dA_ip1half*4.0*bin.dPi;
+      dT4_i=pow(dGrid[bin.nT][i][0][0],4);
+      dT4_ip1=pow(dGrid[bin.nT][i+1][0][0],4);
       dKappa_ip1half=(dT4_i/dKappa_i+dT4_ip1/dKappa_ip1)
         /(dT4_i+dT4_ip1);
-      dAve[bin->nL_rad][i]=-16.0*bin->dPi*bin->dSigma*dA_ip1half*dKappa_ip1half
-        /3.0*(dT4_ip1-dT4_i)/(dGrid[bin->nDM][i][0][0]+dGrid[bin->nDM][i+1][0][0])
+      dAve[bin.nL_rad][i]=-16.0*bin.dPi*bin.dSigma*dA_ip1half*dKappa_ip1half
+        /3.0*(dT4_ip1-dT4_i)/(dGrid[bin.nDM][i][0][0]+dGrid[bin.nDM][i+1][0][0])
         *2.0*dArea;
-      dAve[bin->nL_con][i]=0.0;
-      dU_i=(dGrid[bin->nU0][i+1][0][0]+dGrid[bin->nU0][i][0][0])*0.5;
-      dAve[bin->nKEP][i]=0.5*dGrid[bin->nDM][i][0][0]*dU_i*dU_i;
-      dAve[bin->nKETot][i]=dAve[bin->nKEP][i];//nothing but pulsation energy in 1D
-      dMax[bin->nE][i]=dE_i;
-      dMin[bin->nE][i]=dE_i;
-      dAve[bin->nE][i]=dE_i;
-      dMax[bin->nP][i]=dP_i;
-      dMin[bin->nP][i]=dP_i;
-      dAve[bin->nP][i]=dP_i;
-      dMax[bin->nF_con][i]=0.0;
-      dMin[bin->nF_con][i]=0.0;
-      dAve[bin->nF_con][i]=0.0;
-      dMax[bin->nKappa][i]=dKappa_i;
-      dMin[bin->nKappa][i]=dKappa_i;
-      dAve[bin->nKappa][i]=dKappa_i;
-      dMax[bin->nGamma][i]=dGamma_i;
-      dMin[bin->nGamma][i]=dGamma_i;
-      dAve[bin->nGamma][i]=dGamma_i;
-      dMax[bin->nQ][i]=dQ;
-      dMin[bin->nQ][i]=dQ;
-      dAve[bin->nQ][i]=dQ;
-      dMax[bin->nC][i]=dC;
-      dMin[bin->nC][i]=dC;
-      dAve[bin->nC][i]=dC;
-      nMaxJIndex[bin->nP][i]=0;
-      nMaxKIndex[bin->nP][i]=0;
-      nMinJIndex[bin->nP][i]=0;
-      nMinKIndex[bin->nP][i]=0;
-      nMaxJIndex[bin->nE][i]=0;
-      nMaxKIndex[bin->nE][i]=0;
-      nMinJIndex[bin->nE][i]=0;
-      nMinKIndex[bin->nE][i]=0;
-      nMaxJIndex[bin->nKappa][i]=0;
-      nMaxKIndex[bin->nKappa][i]=0;
-      nMinJIndex[bin->nKappa][i]=0;
-      nMinKIndex[bin->nKappa][i]=0;
-      nMaxJIndex[bin->nGamma][i]=0;
-      nMaxKIndex[bin->nGamma][i]=0;
-      nMinJIndex[bin->nGamma][i]=0;
-      nMinKIndex[bin->nGamma][i]=0;
-      nMaxJIndex[bin->nQ][i]=0;
-      nMaxKIndex[bin->nQ][i]=0;
-      nMinJIndex[bin->nQ][i]=0;
-      nMinKIndex[bin->nQ][i]=0;
-      nMaxJIndex[bin->nC][i]=0;
-      nMaxKIndex[bin->nC][i]=0;
-      nMinJIndex[bin->nC][i]=0;
-      nMinKIndex[bin->nC][i]=0;
-      nMaxJIndex[bin->nL_rad][i]=0;
-      nMaxKIndex[bin->nL_rad][i]=0;
-      nMinJIndex[bin->nL_rad][i]=0;
-      nMinKIndex[bin->nL_rad][i]=0;
-      nMaxJIndex[bin->nKEP][i]=0;
-      nMaxKIndex[bin->nKEP][i]=0;
-      nMinJIndex[bin->nKEP][i]=0;
-      nMinKIndex[bin->nKEP][i]=0;
-      nMaxJIndex[bin->nKETot][i]=0;
-      nMaxKIndex[bin->nKETot][i]=0;
-      nMinJIndex[bin->nKETot][i]=0;
-      nMinKIndex[bin->nKETot][i]=0;
+      dAve[bin.nL_con][i]=0.0;
+      dU_i=(dGrid[bin.nU0][i+1][0][0]+dGrid[bin.nU0][i][0][0])*0.5;
+      dAve[bin.nKEP][i]=0.5*dGrid[bin.nDM][i][0][0]*dU_i*dU_i;
+      dAve[bin.nKETot][i]=dAve[bin.nKEP][i];//nothing but pulsation energy in 1D
+      dMax[bin.nE][i]=dE_i;
+      dMin[bin.nE][i]=dE_i;
+      dAve[bin.nE][i]=dE_i;
+      dMax[bin.nP][i]=dP_i;
+      dMin[bin.nP][i]=dP_i;
+      dAve[bin.nP][i]=dP_i;
+      dMax[bin.nF_con][i]=0.0;
+      dMin[bin.nF_con][i]=0.0;
+      dAve[bin.nF_con][i]=0.0;
+      dMax[bin.nKappa][i]=dKappa_i;
+      dMin[bin.nKappa][i]=dKappa_i;
+      dAve[bin.nKappa][i]=dKappa_i;
+      dMax[bin.nGamma][i]=dGamma_i;
+      dMin[bin.nGamma][i]=dGamma_i;
+      dAve[bin.nGamma][i]=dGamma_i;
+      dMax[bin.nQ][i]=dQ;
+      dMin[bin.nQ][i]=dQ;
+      dAve[bin.nQ][i]=dQ;
+      dMax[bin.nC][i]=dC;
+      dMin[bin.nC][i]=dC;
+      dAve[bin.nC][i]=dC;
+      nMaxJIndex[bin.nP][i]=0;
+      nMaxKIndex[bin.nP][i]=0;
+      nMinJIndex[bin.nP][i]=0;
+      nMinKIndex[bin.nP][i]=0;
+      nMaxJIndex[bin.nE][i]=0;
+      nMaxKIndex[bin.nE][i]=0;
+      nMinJIndex[bin.nE][i]=0;
+      nMinKIndex[bin.nE][i]=0;
+      nMaxJIndex[bin.nKappa][i]=0;
+      nMaxKIndex[bin.nKappa][i]=0;
+      nMinJIndex[bin.nKappa][i]=0;
+      nMinKIndex[bin.nKappa][i]=0;
+      nMaxJIndex[bin.nGamma][i]=0;
+      nMaxKIndex[bin.nGamma][i]=0;
+      nMinJIndex[bin.nGamma][i]=0;
+      nMinKIndex[bin.nGamma][i]=0;
+      nMaxJIndex[bin.nQ][i]=0;
+      nMaxKIndex[bin.nQ][i]=0;
+      nMinJIndex[bin.nQ][i]=0;
+      nMinKIndex[bin.nQ][i]=0;
+      nMaxJIndex[bin.nC][i]=0;
+      nMaxKIndex[bin.nC][i]=0;
+      nMinJIndex[bin.nC][i]=0;
+      nMinKIndex[bin.nC][i]=0;
+      nMaxJIndex[bin.nL_rad][i]=0;
+      nMaxKIndex[bin.nL_rad][i]=0;
+      nMinJIndex[bin.nL_rad][i]=0;
+      nMinKIndex[bin.nL_rad][i]=0;
+      nMaxJIndex[bin.nKEP][i]=0;
+      nMaxKIndex[bin.nKEP][i]=0;
+      nMinJIndex[bin.nKEP][i]=0;
+      nMinKIndex[bin.nKEP][i]=0;
+      nMaxJIndex[bin.nKETot][i]=0;
+      nMaxKIndex[bin.nKETot][i]=0;
+      nMinJIndex[bin.nKETot][i]=0;
+      nMinKIndex[bin.nKETot][i]=0;
     }
     
     //set the rest of the grid
-    nSizeX2=nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells;
-    nSizeY=nSize[bin->nD][1]+nGhostCellsY*2*nNumGhostCells;
-    nSizeZ=nSize[bin->nD][2]+nGhostCellsZ*2*nNumGhostCells;
+    nSizeX2=nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells;
+    nSizeY=nSize[bin.nD][1]+nGhostCellsY*2*nNumGhostCells;
+    nSizeZ=nSize[bin.nD][2]+nGhostCellsZ*2*nNumGhostCells;
     nStartY=nGhostCellsY*nNumGhostCells;
-    nEndY=nSize[bin->nD][1]+nStartY;
+    nEndY=nSize[bin.nD][1]+nStartY;
     nStartZ=nGhostCellsZ*nNumGhostCells;
-    nEndZ=nSize[bin->nD][2]+nStartZ;
+    nEndZ=nSize[bin.nD][2]+nStartZ;
     for(i=nSizeX1;i<nSizeX2;i++){
       dMaxE=-1.0*std::numeric_limits<double>::max();
       dMinE=std::numeric_limits<double>::max();
@@ -865,18 +825,18 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       dMinC=std::numeric_limits<double>::max();
       dSumC=0.0;
       nCount=0;
-      dR_i=(dGrid[bin->nR][i+1][0][0]+dGrid[bin->nR][i][0][0])*0.5;
-      dRSq_ip1half=dGrid[bin->nR][i+1][0][0]*dGrid[bin->nR][i+1][0][0];
+      dR_i=(dGrid[bin.nR][i+1][0][0]+dGrid[bin.nR][i][0][0])*0.5;
+      dRSq_ip1half=dGrid[bin.nR][i+1][0][0]*dGrid[bin.nR][i+1][0][0];
       dRSq_i=dR_i*dR_i;
-      dA_ip1half=dGrid[bin->nR][i+1][0][0]*dGrid[bin->nR][i+1][0][0];
-      dA_im1half=dGrid[bin->nR][i][0][0]*dGrid[bin->nR][i][0][0];
+      dA_ip1half=dGrid[bin.nR][i+1][0][0]*dGrid[bin.nR][i+1][0][0];
+      dA_im1half=dGrid[bin.nR][i][0][0]*dGrid[bin.nR][i][0][0];
       dLSum_rad=0.0;
       dLSum_con=0.0;
       dAreaSum=0.0;
-      dArea1=dRSq_ip1half*4.0*bin->dPi;
+      dArea1=dRSq_ip1half*4.0*bin.dPi;
       dKETotSum=0.0;
       dDMSum=0.0;
-      dDMTemp=dGrid[bin->nDM][i][0][0];//in 1D these are the same
+      dDMTemp=dGrid[bin.nDM][i][0][0];//in 1D these are the same
       
       //start debug LCon
       /*
@@ -913,12 +873,12 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       for(j=nStartY;j<nEndY;j++){
         
         if(nNumDims>1){
-          dTheta_jp1half=dGrid[bin->nTheta][0][j][0];
+          dTheta_jp1half=dGrid[bin.nTheta][0][j][0];
           if(j==0){
-            dTheta_jm1half=dGrid[bin->nTheta][0][j][0]-(dGrid[bin->nTheta][0][j+1][0]-dGrid[bin->nTheta][0][j][0]);
+            dTheta_jm1half=dGrid[bin.nTheta][0][j][0]-(dGrid[bin.nTheta][0][j+1][0]-dGrid[bin.nTheta][0][j][0]);
           }
           else{
-            dTheta_jm1half=dGrid[bin->nTheta][0][j-1][0];
+            dTheta_jm1half=dGrid[bin.nTheta][0][j-1][0];
           }
           dTheta_j=(dTheta_jp1half+dTheta_jm1half)*0.5;
           dA_jp1half=sin(dTheta_jp1half);
@@ -926,45 +886,45 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           dA_j=sin(dTheta_j);
           dArea2=dArea1/2.0*(cos(dTheta_jm1half)-cos(dTheta_jp1half));
           dArea=dArea2;
-          dDMTemp=(cos(dTheta_jm1half)-cos(dTheta_jp1half))*dGrid[bin->nD][i][j][0];
+          dDMTemp=(cos(dTheta_jm1half)-cos(dTheta_jp1half))*dGrid[bin.nD][i][j][0];
         }
         
         for(k=nStartZ;k<nEndZ;k++){
           if(nNumDims>2){
-            dPhi_kp1half=dGrid[bin->nPhi][0][0][k];
+            dPhi_kp1half=dGrid[bin.nPhi][0][0][k];
             if(k==0){
-              dPhi_km1half=dGrid[bin->nPhi][0][0][k]-(dGrid[bin->nPhi][0][0][k+1]-dGrid[bin->nPhi][0][0][k]);
+              dPhi_km1half=dGrid[bin.nPhi][0][0][k]-(dGrid[bin.nPhi][0][0][k+1]-dGrid[bin.nPhi][0][0][k]);
             }
             else{
-              dPhi_km1half=dGrid[bin->nPhi][0][0][k-1];
+              dPhi_km1half=dGrid[bin.nPhi][0][0][k-1];
             }
-            dArea=dArea2/(2.0*bin->dPi)*(dPhi_kp1half-dPhi_km1half);
+            dArea=dArea2/(2.0*bin.dPi)*(dPhi_kp1half-dPhi_km1half);
             dDMTemp=(cos(dTheta_jm1half)-cos(dTheta_jp1half))
-              *(dPhi_kp1half-dPhi_km1half)*dGrid[bin->nD][i][j][k];
+              *(dPhi_kp1half-dPhi_km1half)*dGrid[bin.nD][i][j][k];
           }
           
           //get P,E,Kappa,Gamma, calculate luminosity from cell and add to sum
-          eosTable->getPEKappaGammaCp(dGrid[bin->nT][i][j][k],dGrid[bin->nD][i][j][k],dP_i,dE_i,dKappa_i
+          eosTable->getPEKappaGammaCp(dGrid[bin.nT][i][j][k],dGrid[bin.nD][i][j][k],dP_i,dE_i,dKappa_i
             ,dGamma_i,dCp_i);
           if(i<nSizeX2-1){
-            eosTable->getPEKappaGammaCp(dGrid[bin->nT][i+1][j][k],dGrid[bin->nD][i+1][j][k],dP_ip1,dE_ip1
+            eosTable->getPEKappaGammaCp(dGrid[bin.nT][i+1][j][k],dGrid[bin.nD][i+1][j][k],dP_ip1,dE_ip1
               ,dKappa_ip1,dGamma_ip1,dCp_ip1);
-            dT4_i=pow(dGrid[bin->nT][i][j][k],4);
-            dT4_ip1=pow(dGrid[bin->nT][i+1][j][k],4);
+            dT4_i=pow(dGrid[bin.nT][i][j][k],4);
+            dT4_ip1=pow(dGrid[bin.nT][i+1][j][k],4);
             dKappa_ip1half=(dT4_i/dKappa_i+dT4_ip1/dKappa_ip1)
               /(dT4_i+dT4_ip1);
-            dLSum_rad=dLSum_rad-16.0*bin->dPi*bin->dSigma*dRSq_ip1half*dKappa_ip1half/3.0
-              *(dT4_ip1-dT4_i)/(dGrid[bin->nDM][i][0][0]+dGrid[bin->nDM][i+1][0][0])*2.0*dArea;
-            dRho_ip1half=(dGrid[bin->nD][i][j][k]+dGrid[bin->nD][i+1][j][k])*0.5;
-            dTAve_ip1half=(dAve[bin->nT][i]+dAve[bin->nT][i+1])*0.5;
-            dT_ip1halfjk=(dGrid[bin->nT][i][j][k]+dGrid[bin->nT][i+1][j][k])*0.5;
+            dLSum_rad=dLSum_rad-16.0*bin.dPi*bin.dSigma*dRSq_ip1half*dKappa_ip1half/3.0
+              *(dT4_ip1-dT4_i)/(dGrid[bin.nDM][i][0][0]+dGrid[bin.nDM][i+1][0][0])*2.0*dArea;
+            dRho_ip1half=(dGrid[bin.nD][i][j][k]+dGrid[bin.nD][i+1][j][k])*0.5;
+            dTAve_ip1half=(dAve[bin.nT][i]+dAve[bin.nT][i+1])*0.5;
+            dT_ip1halfjk=(dGrid[bin.nT][i][j][k]+dGrid[bin.nT][i+1][j][k])*0.5;
             dCp_ip1half=(dCp_i+dCp_ip1)*0.5;
             
             //start debug LCon
             /*
             if (bDebugLCon){
               double dLCon=dCp_ip1half*dRho_ip1half*(dT_ip1halfjk-dTAve_ip1half)
-                *(dGrid[bin->nU][i+1][j][k]-dGrid[bin->nU0][i+1][0][0])*dArea;
+                *(dGrid[bin.nU][i+1][j][k]-dGrid[bin.nU0][i+1][0][0])*dArea;
               ofDebugLCon
                 <<std::setw(nWidthIntOutputField)<<j
                 <<std::setw(nWidthIntOutputField)<<k
@@ -972,39 +932,39 @@ void makeRadialProFromColBin(DataFile* bin){//updated
                 <<std::setw(nWidthOutputField)<<dRho_ip1half
                 <<std::setw(nWidthOutputField)<<dT_ip1halfjk
                 <<std::setw(nWidthOutputField)<<dTAve_ip1half
-                <<std::setw(nWidthOutputField)<<dGrid[bin->nU][i+1][j][k]
-                <<std::setw(nWidthOutputField)<<dGrid[bin->nU0][i+1][0][0]
+                <<std::setw(nWidthOutputField)<<dGrid[bin.nU][i+1][j][k]
+                <<std::setw(nWidthOutputField)<<dGrid[bin.nU0][i+1][0][0]
                 <<std::setw(nWidthOutputField)<<dArea
                 <<std::setw(nWidthOutputField)<<dLCon<<std::endl;
             }*/
             //end debug LCon
             
             dLSum_con=dLSum_con+dCp_ip1half*dRho_ip1half*(dT_ip1halfjk-dTAve_ip1half)
-              *(dGrid[bin->nU][i+1][j][k]-dGrid[bin->nU0][i+1][0][0])*dArea;
+              *(dGrid[bin.nU][i+1][j][k]-dGrid[bin.nU0][i+1][0][0])*dArea;
             dF_con=dCp_ip1half*dRho_ip1half*(dT_ip1halfjk-dTAve_ip1half)
-              *(dGrid[bin->nU][i+1][j][k]-dGrid[bin->nU0][i+1][0][0]);
+              *(dGrid[bin.nU][i+1][j][k]-dGrid[bin.nU0][i+1][0][0]);
           }
           else{
             //use surface boundary condition
-            dLSum_rad=dLSum_rad+bin->dSigma*dArea*pow(pow(2.0,0.25)*dGrid[bin->nT][i][j][k],4);
+            dLSum_rad=dLSum_rad+bin.dSigma*dArea*pow(pow(2.0,0.25)*dGrid[bin.nT][i][j][k],4);
             dLSum_con=0.0;
           }
           dAreaSum+=dArea;
           
           //calculate total kinetic energy
           if(i==nSizeX1){
-            dU_ijk=(dGrid[bin->nU][i+1][j][k]+dGrid[bin->nU][i][0][0])*0.5;
+            dU_ijk=(dGrid[bin.nU][i+1][j][k]+dGrid[bin.nU][i][0][0])*0.5;
           }
           else{
-            dU_ijk=(dGrid[bin->nU][i+1][j][k]+dGrid[bin->nU][i][j][k])*0.5;
+            dU_ijk=(dGrid[bin.nU][i+1][j][k]+dGrid[bin.nU][i][j][k])*0.5;
           }
           dVSq_ijk=dU_ijk*dU_ijk;
           if(nNumDims>1){
-            dV_ijk=(dGrid[bin->nV][i][j+1][k]+dGrid[bin->nV][i][j][k])*0.5;
+            dV_ijk=(dGrid[bin.nV][i][j+1][k]+dGrid[bin.nV][i][j][k])*0.5;
             dVSq_ijk+=dV_ijk*dV_ijk;
           }
           if(nNumDims>2){
-            dW_ijk=(dGrid[bin->nW][i][j][k+1]+dGrid[bin->nW][i][j][k])*0.5;
+            dW_ijk=(dGrid[bin.nW][i][j][k+1]+dGrid[bin.nW][i][j][k])*0.5;
             dVSq_ijk+=dW_ijk*dW_ijk;
           }
           dKETotSum+=dDMTemp*dVSq_ijk;
@@ -1012,31 +972,31 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           
           if(dF_con>dMaxF_con){
             dMaxF_con=dF_con;
-            nMaxJIndex[bin->nF_con][i]=j;
-            nMaxKIndex[bin->nF_con][i]=k;
+            nMaxJIndex[bin.nF_con][i]=j;
+            nMaxKIndex[bin.nF_con][i]=k;
           }
           if(dF_con<dMinF_con){
             dMinF_con=dF_con;
-            nMinJIndex[bin->nF_con][i]=j;
-            nMinKIndex[bin->nF_con][i]=k;
+            nMinJIndex[bin.nF_con][i]=j;
+            nMinKIndex[bin.nF_con][i]=k;
           }
           dSumF_con+=dF_con;
           
           //calculate Q
-          dC=sqrt(dGamma_i*dP_i/dGrid[bin->nD][i][j][k]);
+          dC=sqrt(dGamma_i*dP_i/dGrid[bin.nD][i][j][k]);
           dDVDtThreshold=dAVThreshold*dC;
           if(nNumDims>=1){
             if(i==nSizeX1){
-              dDVDt=(dA_ip1half*dGrid[bin->nU][i+1][j][k]
-                -dA_im1half*dGrid[bin->nU][i][0][0])/dRSq_i;
+              dDVDt=(dA_ip1half*dGrid[bin.nU][i+1][j][k]
+                -dA_im1half*dGrid[bin.nU][i][0][0])/dRSq_i;
             }
             else{
-              dDVDt=(dA_ip1half*dGrid[bin->nU][i+1][j][k]
-                -dA_im1half*dGrid[bin->nU][i][j][k])/dRSq_i;
+              dDVDt=(dA_ip1half*dGrid[bin.nU][i+1][j][k]
+                -dA_im1half*dGrid[bin.nU][i][j][k])/dRSq_i;
             }
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ0=dASq*dGrid[bin->nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
+              dQ0=dASq*dGrid[bin.nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
               dQ0=0.0;
@@ -1044,16 +1004,16 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           }
           else if(nNumDims>=2){
             if(j==0){
-              dDVDt=(dA_jp1half*dGrid[bin->nV][i][j][k]
-                -dA_jm1half*dGrid[bin->nV][i][nSizeY-1][k])/dA_j;
+              dDVDt=(dA_jp1half*dGrid[bin.nV][i][j][k]
+                -dA_jm1half*dGrid[bin.nV][i][nSizeY-1][k])/dA_j;
             }
             else{
-              dDVDt=(dA_jp1half*dGrid[bin->nV][i][j][k]
-                -dA_jm1half*dGrid[bin->nV][i][j-1][k])/dA_j;
+              dDVDt=(dA_jp1half*dGrid[bin.nV][i][j][k]
+                -dA_jm1half*dGrid[bin.nV][i][j-1][k])/dA_j;
             }
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ1=dASq*dGrid[bin->nD][i][j][k]
+              dQ1=dASq*dGrid[bin.nD][i][j][k]
                 *dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
@@ -1062,14 +1022,14 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           }
           else if(nNumDims==3){
             if(k==0){
-              dDVDt=(dGrid[bin->nW][i][j][k]-dGrid[bin->nW][i][j][nSizeZ-1]);
+              dDVDt=(dGrid[bin.nW][i][j][k]-dGrid[bin.nW][i][j][nSizeZ-1]);
             }
             else{
-              dDVDt=(dGrid[bin->nW][i][j][k]-dGrid[bin->nW][i][j][k-1]);
+              dDVDt=(dGrid[bin.nW][i][j][k]-dGrid[bin.nW][i][j][k-1]);
             }
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ2=dASq*dGrid[bin->nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
+              dQ2=dASq*dGrid[bin.nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
               dQ2=0.0;
@@ -1079,93 +1039,93 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           
           if(dP_i>dMaxP){
             dMaxP=dP_i;
-            nMaxJIndex[bin->nP][i]=j;
-            nMaxKIndex[bin->nP][i]=k;
+            nMaxJIndex[bin.nP][i]=j;
+            nMaxKIndex[bin.nP][i]=k;
           }
           if(dP_i<dMinP){
             dMinP=dP_i;
-            nMinJIndex[bin->nP][i]=j;
-            nMinKIndex[bin->nP][i]=k;
+            nMinJIndex[bin.nP][i]=j;
+            nMinKIndex[bin.nP][i]=k;
           }
           dSumP+=dP_i;
           if(dE_i>dMaxE){
             dMaxE=dE_i;
-            nMaxJIndex[bin->nE][i]=j;
-            nMaxKIndex[bin->nE][i]=k;
+            nMaxJIndex[bin.nE][i]=j;
+            nMaxKIndex[bin.nE][i]=k;
           }
           if(dE_i<dMinE){
             dMinE=dE_i;
-            nMinJIndex[bin->nE][i]=j;
-            nMinKIndex[bin->nE][i]=k;
+            nMinJIndex[bin.nE][i]=j;
+            nMinKIndex[bin.nE][i]=k;
           }
           dSumE+=dE_i;
           if(dKappa_i>dMaxKappa){
             dMaxKappa=dKappa_i;
-            nMaxJIndex[bin->nKappa][i]=j;
-            nMaxKIndex[bin->nKappa][i]=k;
+            nMaxJIndex[bin.nKappa][i]=j;
+            nMaxKIndex[bin.nKappa][i]=k;
           }
           if(dKappa_i<dMinKappa){
             dMinKappa=dKappa_i;
-            nMinJIndex[bin->nKappa][i]=j;
-            nMinKIndex[bin->nKappa][i]=k;
+            nMinJIndex[bin.nKappa][i]=j;
+            nMinKIndex[bin.nKappa][i]=k;
           }
           dSumKappa+=dKappa_i;
           if(dGamma_i>dMaxGamma){
             dMaxGamma=dGamma_i;
-            nMaxJIndex[bin->nGamma][i]=j;
-            nMaxKIndex[bin->nGamma][i]=k;
+            nMaxJIndex[bin.nGamma][i]=j;
+            nMaxKIndex[bin.nGamma][i]=k;
           }
           if(dGamma_i<dMinGamma){
             dMinGamma=dGamma_i;
-            nMinJIndex[bin->nGamma][i]=j;
-            nMinKIndex[bin->nGamma][i]=k;
+            nMinJIndex[bin.nGamma][i]=j;
+            nMinKIndex[bin.nGamma][i]=k;
           }
           dSumGamma+=dGamma_i;
           if(dQ>dMaxQ){
             dMaxQ=dQ;
-            nMaxJIndex[bin->nQ][i]=j;
-            nMaxKIndex[bin->nQ][i]=k;
+            nMaxJIndex[bin.nQ][i]=j;
+            nMaxKIndex[bin.nQ][i]=k;
           }
           if(dQ<dMinQ){
             dMinQ=dQ;
-            nMinJIndex[bin->nQ][i]=j;
-            nMinKIndex[bin->nQ][i]=k;
+            nMinJIndex[bin.nQ][i]=j;
+            nMinKIndex[bin.nQ][i]=k;
           }
           dSumQ+=dQ;
           if(dC>dMaxC){
             dMaxC=dC;
-            nMaxJIndex[bin->nC][i]=j;
-            nMaxKIndex[bin->nC][i]=k;
+            nMaxJIndex[bin.nC][i]=j;
+            nMaxKIndex[bin.nC][i]=k;
           }
           if(dC<dMinC){
             dMinC=dC;
-            nMinJIndex[bin->nC][i]=j;
-            nMinKIndex[bin->nC][i]=k;
+            nMinJIndex[bin.nC][i]=j;
+            nMinKIndex[bin.nC][i]=k;
           }
           dSumC+=dC;
-          nMaxJIndex[bin->nL_rad][i]=0;
-          nMaxKIndex[bin->nL_rad][i]=0;
-          nMinJIndex[bin->nL_rad][i]=0;
-          nMinKIndex[bin->nL_rad][i]=0;
-          nMaxJIndex[bin->nKEP][i]=0;
-          nMaxKIndex[bin->nKEP][i]=0;
-          nMinJIndex[bin->nKEP][i]=0;
-          nMinKIndex[bin->nKETot][i]=0;
-          nMaxJIndex[bin->nKETot][i]=0;
-          nMaxKIndex[bin->nKETot][i]=0;
-          nMinJIndex[bin->nKETot][i]=0;
-          nMinKIndex[bin->nKETot][i]=0;
+          nMaxJIndex[bin.nL_rad][i]=0;
+          nMaxKIndex[bin.nL_rad][i]=0;
+          nMinJIndex[bin.nL_rad][i]=0;
+          nMinKIndex[bin.nL_rad][i]=0;
+          nMaxJIndex[bin.nKEP][i]=0;
+          nMaxKIndex[bin.nKEP][i]=0;
+          nMinJIndex[bin.nKEP][i]=0;
+          nMinKIndex[bin.nKETot][i]=0;
+          nMaxJIndex[bin.nKETot][i]=0;
+          nMaxKIndex[bin.nKETot][i]=0;
+          nMinJIndex[bin.nKETot][i]=0;
+          nMinKIndex[bin.nKETot][i]=0;
           nCount++;
         }
       }
       if(nNumDims==3){
-        dAve[bin->nD][i]=bin->dCalRhoAve3D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
+        dAve[bin.nD][i]=bin.dCalRhoAve3D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
       }
       else if(nNumDims==2){
-        dAve[bin->nD][i]=bin->dCalRhoAve2D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
+        dAve[bin.nD][i]=bin.dCalRhoAve2D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
       }
       else{
-        dAve[bin->nD][i]=dGrid[bin->nD][i][0][0];
+        dAve[bin.nD][i]=dGrid[bin.nD][i][0][0];
       }
       
       //start debug LCon
@@ -1182,48 +1142,48 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       }*/
       //end debug LCon
       
-      dAve[bin->nL_rad][i]=dLSum_rad/dAreaSum*4.0*bin->dPi*dRSq_ip1half;
-      dAve[bin->nL_con][i]=dLSum_con/dAreaSum*4.0*bin->dPi*dRSq_ip1half;
-      dU_i=(dGrid[bin->nU0][i+1][0][0]+dGrid[bin->nU0][i][0][0])*0.5;
-      dAve[bin->nKEP][i]=0.5*dGrid[bin->nDM][i][0][0]*dU_i*dU_i;
-      dAve[bin->nKETot][i]=0.5*dKETotSum/dDMSum*dGrid[bin->nDM][i][0][0];
-      dMax[bin->nP][i]=dMaxP;
-      dMin[bin->nP][i]=dMinP;
-      dAve[bin->nP][i]=dSumP/double(nCount);
-      dMax[bin->nF_con][i]=dMaxF_con;
-      dMin[bin->nF_con][i]=dMinF_con;
-      dAve[bin->nF_con][i]=dSumF_con/double(nCount);
-      dMax[bin->nE][i]=dMaxE;
-      dMin[bin->nE][i]=dMinE;
-      dAve[bin->nE][i]=dSumE/double(nCount);
-      dMax[bin->nKappa][i]=dMaxKappa;
-      dMin[bin->nKappa][i]=dMinKappa;
-      dAve[bin->nKappa][i]=dSumKappa/double(nCount);
-      dMax[bin->nGamma][i]=dMaxGamma;
-      dMin[bin->nGamma][i]=dMinGamma;
-      dAve[bin->nGamma][i]=dSumGamma/double(nCount);
-      dMax[bin->nQ][i]=dMaxQ;
-      dMin[bin->nQ][i]=dMinQ;
-      dAve[bin->nQ][i]=dSumQ/double(nCount);
-      dMax[bin->nC][i]=dMaxC;
-      dMin[bin->nC][i]=dMinC;
-      dAve[bin->nC][i]=dSumC/double(nCount);
+      dAve[bin.nL_rad][i]=dLSum_rad/dAreaSum*4.0*bin.dPi*dRSq_ip1half;
+      dAve[bin.nL_con][i]=dLSum_con/dAreaSum*4.0*bin.dPi*dRSq_ip1half;
+      dU_i=(dGrid[bin.nU0][i+1][0][0]+dGrid[bin.nU0][i][0][0])*0.5;
+      dAve[bin.nKEP][i]=0.5*dGrid[bin.nDM][i][0][0]*dU_i*dU_i;
+      dAve[bin.nKETot][i]=0.5*dKETotSum/dDMSum*dGrid[bin.nDM][i][0][0];
+      dMax[bin.nP][i]=dMaxP;
+      dMin[bin.nP][i]=dMinP;
+      dAve[bin.nP][i]=dSumP/double(nCount);
+      dMax[bin.nF_con][i]=dMaxF_con;
+      dMin[bin.nF_con][i]=dMinF_con;
+      dAve[bin.nF_con][i]=dSumF_con/double(nCount);
+      dMax[bin.nE][i]=dMaxE;
+      dMin[bin.nE][i]=dMinE;
+      dAve[bin.nE][i]=dSumE/double(nCount);
+      dMax[bin.nKappa][i]=dMaxKappa;
+      dMin[bin.nKappa][i]=dMinKappa;
+      dAve[bin.nKappa][i]=dSumKappa/double(nCount);
+      dMax[bin.nGamma][i]=dMaxGamma;
+      dMin[bin.nGamma][i]=dMinGamma;
+      dAve[bin.nGamma][i]=dSumGamma/double(nCount);
+      dMax[bin.nQ][i]=dMaxQ;
+      dMin[bin.nQ][i]=dMinQ;
+      dAve[bin.nQ][i]=dSumQ/double(nCount);
+      dMax[bin.nC][i]=dMaxC;
+      dMin[bin.nC][i]=dMinC;
+      dAve[bin.nC][i]=dSumC/double(nCount);
     }
   }
   else{//set P, Q, KE, and C
     
     //allocate space
     nGhostCellsX=1;
-    if(nVarInfo[bin->nD][0]==-1){/*all internal variables are cetnered quantities, will be the same as 
+    if(nVarInfo[bin.nD][0]==-1){/*all internal variables are cetnered quantities, will be the same as 
       the density*/
       nGhostCellsX=0;
     }
     nGhostCellsY=1;
-    if(nVarInfo[bin->nD][1]==-1){
+    if(nVarInfo[bin.nD][1]==-1){
       nGhostCellsY=0;
     }
     nGhostCellsZ=1;
-    if(nVarInfo[bin->nD][2]==-1){
+    if(nVarInfo[bin.nD][2]==-1){
       nGhostCellsZ=0;
     }
     double dP;
@@ -1258,7 +1218,7 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     
     //set 1D part of the grid
     nSizeX1=nGhostCellsX*(nNum1DZones+nNumGhostCells);//may be need to +1 if only one proc and variable in interface centered
-    if (nVarInfo[bin->nD][0]==1&&nPeriodic[0]==0){
+    if (nVarInfo[bin.nD][0]==1&&nPeriodic[0]==0){
       nSizeX1=nGhostCellsX*(nNum1DZones+1+nNumGhostCells);
     }
     nSizeY=1;
@@ -1266,61 +1226,61 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     for(i=0;i<nSizeX1;i++){//find average max, and min in 1D region
       
       //calculate P
-      dP=dGrid[bin->nD][i][0][0]*(dGamma-1.0)*dGrid[bin->nE][i][0][0];
+      dP=dGrid[bin.nD][i][0][0]*(dGamma-1.0)*dGrid[bin.nE][i][0][0];
       
       //calculate Q
-      dRSq_i=(dGrid[bin->nR][i+1][0][0]+dGrid[bin->nR][i][0][0])*0.5;
-      dA_ip1half=dGrid[bin->nR][i+1][0][0]*dGrid[bin->nR][i+1][0][0];
-      dA_im1half=dGrid[bin->nR][i][0][0]*dGrid[bin->nR][i][0][0];
-      dC=sqrt(dGamma*dP/dGrid[bin->nD][i][j][k]);
+      dRSq_i=(dGrid[bin.nR][i+1][0][0]+dGrid[bin.nR][i][0][0])*0.5;
+      dA_ip1half=dGrid[bin.nR][i+1][0][0]*dGrid[bin.nR][i+1][0][0];
+      dA_im1half=dGrid[bin.nR][i][0][0]*dGrid[bin.nR][i][0][0];
+      dC=sqrt(dGamma*dP/dGrid[bin.nD][i][j][k]);
       dDVDtThreshold=dAVThreshold*dC;
-      dDVDt=(dA_ip1half*dGrid[bin->nU][i+1][j][k]
-        -dA_im1half*dGrid[bin->nU][i][j][k])/dRSq_i;
+      dDVDt=(dA_ip1half*dGrid[bin.nU][i+1][j][k]
+        -dA_im1half*dGrid[bin.nU][i][j][k])/dRSq_i;
       if(dDVDt<-1.0*dDVDtThreshold){//being compressed
         dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-        dQ=dASq*dGrid[bin->nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
+        dQ=dASq*dGrid[bin.nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
       }
       else{
         dQ=0.0;
       }
-      dU_i=(dGrid[bin->nU0][i+1][0][0]+dGrid[bin->nU0][i][0][0])*0.5;
-      dAve[bin->nKEP][i]=0.5*dGrid[bin->nDM][i][0][0]*dU_i*dU_i;
-      dMax[bin->nP][i]=dP;
-      dMin[bin->nP][i]=dP;
-      dAve[bin->nP][i]=dP;
-      dMax[bin->nQ][i]=dQ;
-      dMin[bin->nQ][i]=dQ;
-      dAve[bin->nQ][i]=dQ;
-      dMax[bin->nC][i]=dC;
-      dMin[bin->nC][i]=dC;
-      dAve[bin->nC][i]=dC;
-      nMaxJIndex[bin->nP][i]=0;
-      nMaxKIndex[bin->nP][i]=0;
-      nMinJIndex[bin->nP][i]=0;
-      nMinKIndex[bin->nP][i]=0;
-      nMaxJIndex[bin->nQ][i]=0;
-      nMaxKIndex[bin->nQ][i]=0;
-      nMinJIndex[bin->nQ][i]=0;
-      nMinKIndex[bin->nQ][i]=0;
-      nMaxJIndex[bin->nC][i]=0;
-      nMaxKIndex[bin->nC][i]=0;
-      nMinJIndex[bin->nC][i]=0;
-      nMinKIndex[bin->nC][i]=0;
-      nMaxJIndex[bin->nKEP][i]=0;
-      nMaxKIndex[bin->nKEP][i]=0;
-      nMinJIndex[bin->nKEP][i]=0;
-      nMinKIndex[bin->nKEP][i]=0;
+      dU_i=(dGrid[bin.nU0][i+1][0][0]+dGrid[bin.nU0][i][0][0])*0.5;
+      dAve[bin.nKEP][i]=0.5*dGrid[bin.nDM][i][0][0]*dU_i*dU_i;
+      dMax[bin.nP][i]=dP;
+      dMin[bin.nP][i]=dP;
+      dAve[bin.nP][i]=dP;
+      dMax[bin.nQ][i]=dQ;
+      dMin[bin.nQ][i]=dQ;
+      dAve[bin.nQ][i]=dQ;
+      dMax[bin.nC][i]=dC;
+      dMin[bin.nC][i]=dC;
+      dAve[bin.nC][i]=dC;
+      nMaxJIndex[bin.nP][i]=0;
+      nMaxKIndex[bin.nP][i]=0;
+      nMinJIndex[bin.nP][i]=0;
+      nMinKIndex[bin.nP][i]=0;
+      nMaxJIndex[bin.nQ][i]=0;
+      nMaxKIndex[bin.nQ][i]=0;
+      nMinJIndex[bin.nQ][i]=0;
+      nMinKIndex[bin.nQ][i]=0;
+      nMaxJIndex[bin.nC][i]=0;
+      nMaxKIndex[bin.nC][i]=0;
+      nMinJIndex[bin.nC][i]=0;
+      nMinKIndex[bin.nC][i]=0;
+      nMaxJIndex[bin.nKEP][i]=0;
+      nMaxKIndex[bin.nKEP][i]=0;
+      nMinJIndex[bin.nKEP][i]=0;
+      nMinKIndex[bin.nKEP][i]=0;
       
     }
     
     //set the rest of the grid
-    nSizeX2=nSize[bin->nD][0]+nGhostCellsX*2*nNumGhostCells;
-    nSizeY=nSize[bin->nD][1]+nGhostCellsY*2*nNumGhostCells;
-    nSizeZ=nSize[bin->nD][2]+nGhostCellsZ*2*nNumGhostCells;
+    nSizeX2=nSize[bin.nD][0]+nGhostCellsX*2*nNumGhostCells;
+    nSizeY=nSize[bin.nD][1]+nGhostCellsY*2*nNumGhostCells;
+    nSizeZ=nSize[bin.nD][2]+nGhostCellsZ*2*nNumGhostCells;
     nStartY=nGhostCellsY*nNumGhostCells;
-    nEndY=nSize[bin->nD][1]+nStartY;
+    nEndY=nSize[bin.nD][1]+nStartY;
     nStartZ=nGhostCellsZ*nNumGhostCells;
-    nEndZ=nSize[bin->nD][2]+nStartZ;
+    nEndZ=nSize[bin.nD][2]+nStartZ;
     for(i=nSizeX1;i<nSizeX2;i++){
       dMaxP=-1.0*std::numeric_limits<double>::max();
       dMinP=std::numeric_limits<double>::max();
@@ -1333,9 +1293,9 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       dSumC=0.0;
       nCount=0;
       for(j=nStartY;j<nEndY;j++){
-        dTheta_jp1half=dGrid[bin->nTheta][0][j][0];
+        dTheta_jp1half=dGrid[bin.nTheta][0][j][0];
         if(j==0){
-          dTheta_jm1half=dGrid[bin->nTheta][0][j][0]-(dGrid[bin->nTheta][0][j+1][0]-dGrid[bin->nTheta][0][j][0]);
+          dTheta_jm1half=dGrid[bin.nTheta][0][j][0]-(dGrid[bin.nTheta][0][j+1][0]-dGrid[bin.nTheta][0][j][0]);
         }
         dTheta_j=(dTheta_jp1half+dTheta_jm1half)*0.5;
         dA_jp1half=sin(dTheta_jp1half);
@@ -1344,17 +1304,17 @@ void makeRadialProFromColBin(DataFile* bin){//updated
         for(k=nStartZ;k<nEndZ;k++){
           
           //calculate P
-          dP=dGrid[bin->nD][i][j][k]*(dGamma-1.0)*dGrid[bin->nE][i][j][k];
+          dP=dGrid[bin.nD][i][j][k]*(dGamma-1.0)*dGrid[bin.nE][i][j][k];
         
           //calculate Q
-          dC=sqrt(dGamma*dP/dGrid[bin->nD][i][j][k]);
+          dC=sqrt(dGamma*dP/dGrid[bin.nD][i][j][k]);
           dDVDtThreshold=dAVThreshold*dC;
           if(nNumDims>=1){
-            dDVDt=(dA_ip1half*dGrid[bin->nU][i+1][j][k]
-              -dA_im1half*dGrid[bin->nU][i][j][k])/dRSq_i;
+            dDVDt=(dA_ip1half*dGrid[bin.nU][i+1][j][k]
+              -dA_im1half*dGrid[bin.nU][i][j][k])/dRSq_i;
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ0=dASq*dGrid[bin->nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
+              dQ0=dASq*dGrid[bin.nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
               dQ0=0.0;
@@ -1362,16 +1322,16 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           }
           else if(nNumDims>=2){
             if(j==0){
-              dDVDt=(dA_jp1half*dGrid[bin->nV][i][j][k]
-                -dA_jm1half*dGrid[bin->nV][i][nSizeY-1][k])/dA_j;
+              dDVDt=(dA_jp1half*dGrid[bin.nV][i][j][k]
+                -dA_jm1half*dGrid[bin.nV][i][nSizeY-1][k])/dA_j;
             }
             else{
-              dDVDt=(dA_jp1half*dGrid[bin->nV][i][j][k]
-                -dA_jm1half*dGrid[bin->nV][i][j-1][k])/dA_j;
+              dDVDt=(dA_jp1half*dGrid[bin.nV][i][j][k]
+                -dA_jm1half*dGrid[bin.nV][i][j-1][k])/dA_j;
             }
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ1=dASq*dGrid[bin->nD][i][j][k]
+              dQ1=dASq*dGrid[bin.nD][i][j][k]
                 *dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
@@ -1380,14 +1340,14 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           }
           else if(nNumDims==3){
             if(k==0){
-              dDVDt=(dGrid[bin->nW][i][j][k]-dGrid[bin->nW][i][j][nSizeZ-1]);
+              dDVDt=(dGrid[bin.nW][i][j][k]-dGrid[bin.nW][i][j][nSizeZ-1]);
             }
             else{
-              dDVDt=(dGrid[bin->nW][i][j][k]-dGrid[bin->nW][i][j][k-1]);
+              dDVDt=(dGrid[bin.nW][i][j][k]-dGrid[bin.nW][i][j][k-1]);
             }
             if(dDVDt<-1.0*dDVDtThreshold){//being compressed
               dDVDt_mthreshold=dDVDt+dDVDtThreshold;
-              dQ2=dASq*dGrid[bin->nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
+              dQ2=dASq*dGrid[bin.nD][i][j][k]*dDVDt_mthreshold*dDVDt_mthreshold;
             }
             else{
               dQ2=0.0;
@@ -1397,70 +1357,70 @@ void makeRadialProFromColBin(DataFile* bin){//updated
           
           if(dP>dMaxP){
             dMaxP=dP;
-            nMaxJIndex[bin->nP][i]=j;
-            nMaxKIndex[bin->nP][i]=k;
+            nMaxJIndex[bin.nP][i]=j;
+            nMaxKIndex[bin.nP][i]=k;
           }
           if(dP<dMinP){
             dMinP=dP;
-            nMinJIndex[bin->nP][i]=j;
-            nMinKIndex[bin->nP][i]=k;
+            nMinJIndex[bin.nP][i]=j;
+            nMinKIndex[bin.nP][i]=k;
           }
           dSumP+=dP;
           if(dQ>dMaxQ){
             dMaxQ=dQ;
-            nMaxJIndex[bin->nQ][i]=j;
-            nMaxKIndex[bin->nQ][i]=k;
+            nMaxJIndex[bin.nQ][i]=j;
+            nMaxKIndex[bin.nQ][i]=k;
           }
           if(dQ<dMinQ){
             dMinQ=dQ;
-            nMinJIndex[bin->nQ][i]=j;
-            nMinKIndex[bin->nQ][i]=k;
+            nMinJIndex[bin.nQ][i]=j;
+            nMinKIndex[bin.nQ][i]=k;
           }
           dSumQ+=dQ;
           if(dC>dMaxC){
             dMaxC=dC;
-            nMaxJIndex[bin->nC][i]=j;
-            nMaxKIndex[bin->nC][i]=k;
+            nMaxJIndex[bin.nC][i]=j;
+            nMaxKIndex[bin.nC][i]=k;
           }
           if(dC<dMinC){
             dMinC=dC;
-            nMinJIndex[bin->nC][i]=j;
-            nMinKIndex[bin->nC][i]=k;
+            nMinJIndex[bin.nC][i]=j;
+            nMinKIndex[bin.nC][i]=k;
           }
           dSumC+=dC;
           
           nCount++;
         }
       }
-      dU_i=(dGrid[bin->nU0][i+1][0][0]+dGrid[bin->nU0][i][0][0])*0.5;
+      dU_i=(dGrid[bin.nU0][i+1][0][0]+dGrid[bin.nU0][i][0][0])*0.5;
       if(nNumDims==3){
-        dAve[bin->nD][i]=bin->dCalRhoAve3D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
+        dAve[bin.nD][i]=bin.dCalRhoAve3D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
       }
       else if(nNumDims==2){
-        dAve[bin->nD][i]=bin->dCalRhoAve2D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
+        dAve[bin.nD][i]=bin.dCalRhoAve2D(dGrid,i,nStartY,nEndY,nStartZ,nEndZ);
       }
       else{
-        dAve[bin->nD][i]=dGrid[bin->nD][i][0][0];
+        dAve[bin.nD][i]=dGrid[bin.nD][i][0][0];
       }
-      dAve[bin->nKEP][i]=0.5*dGrid[bin->nDM][i][0][0]*dU_i*dU_i;
-      dMax[bin->nP][i]=dMaxP;
-      dMin[bin->nP][i]=dMinP;
-      dAve[bin->nP][i]=dSumP/double(nCount);
-      dMax[bin->nQ][i]=dMaxQ;
-      dMin[bin->nQ][i]=dMinQ;
-      dAve[bin->nQ][i]=dSumQ/double(nCount);
-      dMax[bin->nC][i]=dMaxC;
-      dMin[bin->nC][i]=dMinC;
-      dAve[bin->nC][i]=dSumC/double(nCount);
-      nMaxJIndex[bin->nKEP][i]=0;
-      nMaxKIndex[bin->nKEP][i]=0;
-      nMinJIndex[bin->nKEP][i]=0;
-      nMinKIndex[bin->nKEP][i]=0;
+      dAve[bin.nKEP][i]=0.5*dGrid[bin.nDM][i][0][0]*dU_i*dU_i;
+      dMax[bin.nP][i]=dMaxP;
+      dMin[bin.nP][i]=dMinP;
+      dAve[bin.nP][i]=dSumP/double(nCount);
+      dMax[bin.nQ][i]=dMaxQ;
+      dMin[bin.nQ][i]=dMinQ;
+      dAve[bin.nQ][i]=dSumQ/double(nCount);
+      dMax[bin.nC][i]=dMaxC;
+      dMin[bin.nC][i]=dMinC;
+      dAve[bin.nC][i]=dSumC/double(nCount);
+      nMaxJIndex[bin.nKEP][i]=0;
+      nMaxKIndex[bin.nKEP][i]=0;
+      nMinJIndex[bin.nKEP][i]=0;
+      nMinKIndex[bin.nKEP][i]=0;
     }
   }
   
   //open output file
-  std::string sFileNameOut=bin->sFileName+"_pro.txt";
+  std::string sFileNameOut=bin.sFileName+"_pro.txt";
   std::ofstream ofFile;
   ofFile.open(sFileNameOut.c_str());
   if(!ofFile.good()){
@@ -1471,8 +1431,8 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   }
   
   //set double output precision
-  ofFile.precision(bin->nPrecisionAscii);
-  if(bin->bScientific){
+  ofFile.precision(bin.nPrecisionAscii);
+  if(bin.bScientific){
     ofFile.unsetf(std::ios::fixed);
     ofFile.setf(std::ios::scientific);
   }
@@ -1565,7 +1525,7 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     <<std::setw(nWidthIntOutputField)<<"C_min_j(78)"
     <<std::setw(nWidthIntOutputField)<<"C_min_k(79)"
     <<std::setw(nWidthOutputField)<<"UpFillFac(80)";
-  if(bin->bExtraInfoInProfile){
+  if(bin.bExtraInfoInProfile){
     ofFile<<std::setw(nWidthOutputField)<<"DlnPDlnT(81)"
       <<std::setw(nWidthOutputField)<<"DlnPDlnRho(82)"
       <<std::setw(nWidthOutputField)<<"DEDT(83)";
@@ -1577,48 +1537,48 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   for(int i=0;i<nSizeGlobe[0]+2*nNumGhostCells;i++){
     
     //calculate mass error
-    dErrorDM_r=(4.0/3.0*bin->dPi*dAve[bin->nD][i]*(pow(dGrid[bin->nR][i+1][0][0],3.0)
-      -pow(dGrid[bin->nR][i][0][0],3.0))-dGrid[bin->nDM][i][0][0])/dGrid[bin->nDM][i][0][0];
+    dErrorDM_r=(4.0/3.0*bin.dPi*dAve[bin.nD][i]*(pow(dGrid[bin.nR][i+1][0][0],3.0)
+      -pow(dGrid[bin.nR][i][0][0],3.0))-dGrid[bin.nDM][i][0][0])/dGrid[bin.nDM][i][0][0];
     double dDlnPDlnT;
     double dDlnPDlnRho;
     double dDEDT;
-    eosTable->getDlnPDlnTDlnPDlnPDEDT(dAve[bin->nT][i],dAve[bin->nD][i],dDlnPDlnT,dDlnPDlnRho,dDEDT);
+    eosTable->getDlnPDlnTDlnPDlnPDEDT(dAve[bin.nT][i],dAve[bin.nD][i],dDlnPDlnT,dDlnPDlnRho,dDEDT);
     
-    nMaxJIndex[bin->nP][i]=0;
-    nMaxKIndex[bin->nP][i]=0;
-    nMinJIndex[bin->nP][i]=0;
-    nMinKIndex[bin->nP][i]=0;
+    nMaxJIndex[bin.nP][i]=0;
+    nMaxKIndex[bin.nP][i]=0;
+    nMinJIndex[bin.nP][i]=0;
+    nMinKIndex[bin.nP][i]=0;
     
     ofFile<<std::setw(nWidthIntOutputField)<<i//1
-      <<std::setw(nWidthOutputField)<<dGrid[bin->nM][i][0][0]//2
-      <<std::setw(nWidthOutputField)<<dGrid[bin->nDM][i][0][0]//3
+      <<std::setw(nWidthOutputField)<<dGrid[bin.nM][i][0][0]//2
+      <<std::setw(nWidthOutputField)<<dGrid[bin.nDM][i][0][0]//3
       <<std::setw(nWidthOutputField)<<dErrorDM_r//4
-      <<std::setw(nWidthOutputField)<<dGrid[bin->nR][i][0][0]//5
-      <<std::setw(nWidthOutputField)<<dGrid[bin->nR][i+1][0][0]//6
-      <<std::setw(nWidthOutputField)<<dAve[bin->nD][i]//7
-      <<std::setw(nWidthOutputField)<<dMax[bin->nD][i]//8
-      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nD][i]//9
-      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nD][i]//10
-      <<std::setw(nWidthOutputField)<<dMin[bin->nD][i]//11
-      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nD][i]//12
-      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nD][i]//13
-      <<std::setw(nWidthOutputField)<<dAve[bin->nU][i]//14
-      <<std::setw(nWidthOutputField)<<dMax[bin->nU][i]//15
-      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nU][i]//16
-      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nU][i]//17
-      <<std::setw(nWidthOutputField)<<dMin[bin->nU][i]//18
-      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nU][i]//19
-      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nU][i]//20
-      <<std::setw(nWidthOutputField)<<dGrid[bin->nU0][i][0][0];//21
+      <<std::setw(nWidthOutputField)<<dGrid[bin.nR][i][0][0]//5
+      <<std::setw(nWidthOutputField)<<dGrid[bin.nR][i+1][0][0]//6
+      <<std::setw(nWidthOutputField)<<dAve[bin.nD][i]//7
+      <<std::setw(nWidthOutputField)<<dMax[bin.nD][i]//8
+      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nD][i]//9
+      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nD][i]//10
+      <<std::setw(nWidthOutputField)<<dMin[bin.nD][i]//11
+      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nD][i]//12
+      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nD][i]//13
+      <<std::setw(nWidthOutputField)<<dAve[bin.nU][i]//14
+      <<std::setw(nWidthOutputField)<<dMax[bin.nU][i]//15
+      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nU][i]//16
+      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nU][i]//17
+      <<std::setw(nWidthOutputField)<<dMin[bin.nU][i]//18
+      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nU][i]//19
+      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nU][i]//20
+      <<std::setw(nWidthOutputField)<<dGrid[bin.nU0][i][0][0];//21
     if(nNumDims>1){
       ofFile
-        <<std::setw(nWidthOutputField)<<dAve[bin->nV][i]//22
-        <<std::setw(nWidthOutputField)<<dMax[bin->nV][i]//23
-        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nV][i]//24
-        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nV][i]//25
-        <<std::setw(nWidthOutputField)<<dMin[bin->nV][i]//26
-        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nV][i]//27
-        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nV][i];//28
+        <<std::setw(nWidthOutputField)<<dAve[bin.nV][i]//22
+        <<std::setw(nWidthOutputField)<<dMax[bin.nV][i]//23
+        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nV][i]//24
+        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nV][i]//25
+        <<std::setw(nWidthOutputField)<<dMin[bin.nV][i]//26
+        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nV][i]//27
+        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nV][i];//28
     }
     else{
       ofFile
@@ -1632,13 +1592,13 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     }
     if(nNumDims>2){
       ofFile
-        <<std::setw(nWidthOutputField)<<dAve[bin->nW][i]//29
-        <<std::setw(nWidthOutputField)<<dMax[bin->nW][i]//30
-        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nW][i]//31
-        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nW][i]//32
-        <<std::setw(nWidthOutputField)<<dMin[bin->nW][i]//33
-        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nW][i]//34
-        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nW][i];//35
+        <<std::setw(nWidthOutputField)<<dAve[bin.nW][i]//29
+        <<std::setw(nWidthOutputField)<<dMax[bin.nW][i]//30
+        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nW][i]//31
+        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nW][i]//32
+        <<std::setw(nWidthOutputField)<<dMin[bin.nW][i]//33
+        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nW][i]//34
+        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nW][i];//35
     }
     else{
       ofFile
@@ -1651,21 +1611,21 @@ void makeRadialProFromColBin(DataFile* bin){//updated
         <<std::setw(nWidthIntOutputField)<<"-";//35
     }
     ofFile
-      <<std::setw(nWidthOutputField)<<dAve[bin->nQ][i]//36
-      <<std::setw(nWidthOutputField)<<dMax[bin->nQ][i]//37
-      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nQ][i]//38
-      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nQ][i]//39
-      <<std::setw(nWidthOutputField)<<dMin[bin->nQ][i]//40
-      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nQ][i]//41
-      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nQ][i];//42
+      <<std::setw(nWidthOutputField)<<dAve[bin.nQ][i]//36
+      <<std::setw(nWidthOutputField)<<dMax[bin.nQ][i]//37
+      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nQ][i]//38
+      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nQ][i]//39
+      <<std::setw(nWidthOutputField)<<dMin[bin.nQ][i]//40
+      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nQ][i]//41
+      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nQ][i];//42
     ofFile
-      <<std::setw(nWidthOutputField)<<dAve[bin->nE][i]//43
-      <<std::setw(nWidthOutputField)<<dMax[bin->nE][i]//44
-      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nE][i]//45
-      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nE][i]//46
-      <<std::setw(nWidthOutputField)<<dMin[bin->nE][i]//47
-      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nE][i]//48
-      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nE][i];//49
+      <<std::setw(nWidthOutputField)<<dAve[bin.nE][i]//43
+      <<std::setw(nWidthOutputField)<<dMax[bin.nE][i]//44
+      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nE][i]//45
+      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nE][i]//46
+      <<std::setw(nWidthOutputField)<<dMin[bin.nE][i]//47
+      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nE][i]//48
+      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nE][i];//49
     if(nGammaLaw==0){
       ofFile
         <<std::setw(nWidthOutputField)<<"-"//50
@@ -1683,23 +1643,23 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     }
     else{
       ofFile
-        <<std::setw(nWidthOutputField)<<dAve[bin->nT][i]//50
-        <<std::setw(nWidthOutputField)<<dMax[bin->nT][i]//51
-        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nT][i]//52
-        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nT][i]//53
-        <<std::setw(nWidthOutputField)<<dMin[bin->nT][i]//54
-        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nT][i]//55
-        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nT][i]//56
-        <<std::setw(nWidthOutputField)<<dAve[bin->nKappa][i]//57
-        <<std::setw(nWidthOutputField)<<dMax[bin->nKappa][i]//58
-        <<std::setw(nWidthOutputField)<<dMin[bin->nKappa][i];//59
+        <<std::setw(nWidthOutputField)<<dAve[bin.nT][i]//50
+        <<std::setw(nWidthOutputField)<<dMax[bin.nT][i]//51
+        <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nT][i]//52
+        <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nT][i]//53
+        <<std::setw(nWidthOutputField)<<dMin[bin.nT][i]//54
+        <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nT][i]//55
+        <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nT][i]//56
+        <<std::setw(nWidthOutputField)<<dAve[bin.nKappa][i]//57
+        <<std::setw(nWidthOutputField)<<dMax[bin.nKappa][i]//58
+        <<std::setw(nWidthOutputField)<<dMin[bin.nKappa][i];//59
       if(i!=0){
         ofFile
-          <<std::setw(nWidthOutputField)<<dAve[bin->nL_rad][i-1]/bin->dLSun//60
-          <<std::setw(nWidthOutputField)<<dAve[bin->nL_con][i-1]/bin->dLSun//61
-          <<std::setw(nWidthOutputField)<<dAve[bin->nF_con][i-1]/bin->dLSun//62
-          <<std::setw(nWidthOutputField)<<dMax[bin->nF_con][i-1]/bin->dLSun//63
-          <<std::setw(nWidthOutputField)<<dMin[bin->nF_con][i-1]/bin->dLSun;//64
+          <<std::setw(nWidthOutputField)<<dAve[bin.nL_rad][i-1]/bin.dLSun//60
+          <<std::setw(nWidthOutputField)<<dAve[bin.nL_con][i-1]/bin.dLSun//61
+          <<std::setw(nWidthOutputField)<<dAve[bin.nF_con][i-1]/bin.dLSun//62
+          <<std::setw(nWidthOutputField)<<dMax[bin.nF_con][i-1]/bin.dLSun//63
+          <<std::setw(nWidthOutputField)<<dMin[bin.nF_con][i-1]/bin.dLSun;//64
       }
       else{//luminosity not defined at inner interface
         ofFile
@@ -1711,23 +1671,23 @@ void makeRadialProFromColBin(DataFile* bin){//updated
       }
     }
     ofFile
-      <<std::setw(nWidthOutputField)<<dAve[bin->nKEP][i]//65
-      <<std::setw(nWidthOutputField)<<dAve[bin->nKETot][i]//66
-      <<std::setw(nWidthOutputField)<<dAve[bin->nP][i]//67
-      <<std::setw(nWidthOutputField)<<dMax[bin->nP][i]//68
-      <<std::setw(nWidthOutputField)<<dMin[bin->nP][i]//69
-      <<std::setw(nWidthOutputField)<<dAve[bin->nGamma][i]//70
-      <<std::setw(nWidthOutputField)<<dMax[bin->nGamma][i]//71
-      <<std::setw(nWidthOutputField)<<dMin[bin->nGamma][i]//72
-      <<std::setw(nWidthOutputField)<<dAve[bin->nC][i]//73
-      <<std::setw(nWidthOutputField)<<dMax[bin->nC][i]//74
-      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nC][i]//75
-      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nC][i]//76
-      <<std::setw(nWidthOutputField)<<dMin[bin->nC][i]//77
-      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nC][i]//78
-      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nC][i]//79
+      <<std::setw(nWidthOutputField)<<dAve[bin.nKEP][i]//65
+      <<std::setw(nWidthOutputField)<<dAve[bin.nKETot][i]//66
+      <<std::setw(nWidthOutputField)<<dAve[bin.nP][i]//67
+      <<std::setw(nWidthOutputField)<<dMax[bin.nP][i]//68
+      <<std::setw(nWidthOutputField)<<dMin[bin.nP][i]//69
+      <<std::setw(nWidthOutputField)<<dAve[bin.nGamma][i]//70
+      <<std::setw(nWidthOutputField)<<dMax[bin.nGamma][i]//71
+      <<std::setw(nWidthOutputField)<<dMin[bin.nGamma][i]//72
+      <<std::setw(nWidthOutputField)<<dAve[bin.nC][i]//73
+      <<std::setw(nWidthOutputField)<<dMax[bin.nC][i]//74
+      <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nC][i]//75
+      <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nC][i]//76
+      <<std::setw(nWidthOutputField)<<dMin[bin.nC][i]//77
+      <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nC][i]//78
+      <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nC][i]//79
       <<std::setw(nWidthOutputField)<<dUpFlowFillingFactor[i];//80
-    if(bin->bExtraInfoInProfile){
+    if(bin.bExtraInfoInProfile){
       ofFile<<std::setw(nWidthOutputField)<<dDlnPDlnT//81
         <<std::setw(nWidthOutputField)<<dDlnPDlnRho//82
         <<std::setw(nWidthOutputField)<<dDEDT;//83
@@ -1736,10 +1696,10 @@ void makeRadialProFromColBin(DataFile* bin){//updated
   }
   ofFile
     <<std::setw(nWidthIntOutputField)<<(nSizeGlobe[0]+2*nNumGhostCells)//1
-    <<std::setw(nWidthOutputField)<<dGrid[bin->nM][nSizeGlobe[0]+2*nNumGhostCells][0][0]//2
+    <<std::setw(nWidthOutputField)<<dGrid[bin.nM][nSizeGlobe[0]+2*nNumGhostCells][0][0]//2
     <<std::setw(nWidthOutputField)<<"-"//3
     <<std::setw(nWidthOutputField)<<"-"//4
-    <<std::setw(nWidthOutputField)<<dGrid[bin->nR][nSizeGlobe[0]+2*nNumGhostCells][0][0]//5
+    <<std::setw(nWidthOutputField)<<dGrid[bin.nR][nSizeGlobe[0]+2*nNumGhostCells][0][0]//5
     <<std::setw(nWidthOutputField)<<"-"//6
     <<std::setw(nWidthOutputField)<<"-"//7
     <<std::setw(nWidthOutputField)<<"-"//8
@@ -1748,14 +1708,14 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     <<std::setw(nWidthOutputField)<<"-"//11
     <<std::setw(nWidthIntOutputField)<<"-"//12
     <<std::setw(nWidthIntOutputField)<<"-"//13
-    <<std::setw(nWidthOutputField)<<dAve[bin->nU][nSizeGlobe[0]+2*nNumGhostCells]//14
-    <<std::setw(nWidthOutputField)<<dMax[bin->nU][nSizeGlobe[0]+2*nNumGhostCells]//15
-    <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin->nU][i]//16
-    <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin->nU][i]//17
-    <<std::setw(nWidthOutputField)<<dMin[bin->nU][nSizeGlobe[0]+2*nNumGhostCells]//18
-    <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin->nU][i]//19
-    <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin->nU][i]//20
-    <<std::setw(nWidthOutputField)<<dAve[bin->nU0][nSizeGlobe[0]+2*nNumGhostCells]//21
+    <<std::setw(nWidthOutputField)<<dAve[bin.nU][nSizeGlobe[0]+2*nNumGhostCells]//14
+    <<std::setw(nWidthOutputField)<<dMax[bin.nU][nSizeGlobe[0]+2*nNumGhostCells]//15
+    <<std::setw(nWidthIntOutputField)<<nMaxJIndex[bin.nU][i]//16
+    <<std::setw(nWidthIntOutputField)<<nMaxKIndex[bin.nU][i]//17
+    <<std::setw(nWidthOutputField)<<dMin[bin.nU][nSizeGlobe[0]+2*nNumGhostCells]//18
+    <<std::setw(nWidthIntOutputField)<<nMinJIndex[bin.nU][i]//19
+    <<std::setw(nWidthIntOutputField)<<nMinKIndex[bin.nU][i]//20
+    <<std::setw(nWidthOutputField)<<dAve[bin.nU0][nSizeGlobe[0]+2*nNumGhostCells]//21
     <<std::setw(nWidthOutputField)<<"-"//22
     <<std::setw(nWidthOutputField)<<"-"//23
     <<std::setw(nWidthIntOutputField)<<"-"//24
@@ -1794,11 +1754,11 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     <<std::setw(nWidthOutputField)<<"-"//57
     <<std::setw(nWidthOutputField)<<"-"//58
     <<std::setw(nWidthOutputField)<<"-"//59
-    <<std::setw(nWidthOutputField)<<dAve[bin->nL_rad][nSizeGlobe[0]+2*nNumGhostCells-1]/bin->dLSun//60
-    <<std::setw(nWidthOutputField)<<dAve[bin->nL_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin->dLSun//61
-    <<std::setw(nWidthOutputField)<<dAve[bin->nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin->dLSun//62
-    <<std::setw(nWidthOutputField)<<dMax[bin->nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin->dLSun//63
-    <<std::setw(nWidthOutputField)<<dMin[bin->nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin->dLSun//64
+    <<std::setw(nWidthOutputField)<<dAve[bin.nL_rad][nSizeGlobe[0]+2*nNumGhostCells-1]/bin.dLSun//60
+    <<std::setw(nWidthOutputField)<<dAve[bin.nL_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin.dLSun//61
+    <<std::setw(nWidthOutputField)<<dAve[bin.nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin.dLSun//62
+    <<std::setw(nWidthOutputField)<<dMax[bin.nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin.dLSun//63
+    <<std::setw(nWidthOutputField)<<dMin[bin.nF_con][nSizeGlobe[0]+2*nNumGhostCells-1]/bin.dLSun//64
     <<std::setw(nWidthOutputField)<<"-"//65
     <<std::setw(nWidthOutputField)<<"-"//66
     <<std::setw(nWidthOutputField)<<"-"//67
@@ -1815,7 +1775,7 @@ void makeRadialProFromColBin(DataFile* bin){//updated
     <<std::setw(nWidthIntOutputField)<<"-"//78
     <<std::setw(nWidthIntOutputField)<<"-"//79
     <<std::setw(nWidthOutputField)<<dUpFlowFillingFactor[nSizeGlobe[0]+2*nNumGhostCells];//80
-  if(bin->bExtraInfoInProfile){
+  if(bin.bExtraInfoInProfile){
     ofFile<<std::setw(nWidthOutputField)<<"-"//81
       <<std::setw(nWidthOutputField)<<"-"//82
       <<std::setw(nWidthOutputField)<<"-";//83

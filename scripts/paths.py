@@ -15,12 +15,14 @@ BasePath=os.path.dirname(os.path.realpath(__file__))
 BasePath=os.path.dirname(BasePath)
 
 SPHERLSanalConfig=BasePath+"/config/"
-scriptPath=BasePath+"/scripts"
-SPHERLSDataPath=BasePath+"/data"
-EOSPath=BasePath+"/eos"
+scriptPath=BasePath+"/scripts/"
+SPHERLSDataPath=BasePath+"/data/"
+EOSPath=BasePath+"/eos/"
+binPath=BasePath+"/bin/"
 velocityProfilePath=SPHERLSDataPath+"/velocity_pro"
-ref_calcsPath=SPHERLSDataPath+"/ref_calcs"
 srcPath=BasePath+"/src/"
+
+ref_calcsPath=SPHERLSDataPath+"/ref_calcs"
 debug=False
 
 def check_paths():

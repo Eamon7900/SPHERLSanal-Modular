@@ -14,13 +14,12 @@
 #include "binfile.h"
 #include "exception2.h"
 
-eos::eos(){
+eos::eos() {
   nNumT=0;
   nNumRho=0;
   dLogP=NULL;
   dLogE=NULL;
   dLogKappa=NULL;
-  setExePath();
 }
 
 eos::eos(std::string fileName)
@@ -32,7 +31,6 @@ eos::eos(std::string fileName)
   dLogP=NULL;
   dLogE=NULL;
   dLogKappa=NULL;
-  setExePath();
 }
 eos& eos::operator=(const eos & rhs){//assignment operator
   if (this !=&rhs){
@@ -252,7 +250,7 @@ void eos::readBin()throw(exception2){
     && sFileName.substr(0,2)!="./"){
     
     //if relative to executable directory add executable directory
-    sTemp=sExePath+"/"+sFileName;
+    sTemp=sRootDir+"/"+sFileName;
   }
   else{
     sTemp=sFileName;
@@ -1773,39 +1771,4 @@ void eos::getDlnPDlnTDlnPDlnPDEDT(double dT, double dRho, double &dDlnPDlnT,
   //calculate dE/dT at constant density, equal to C_v (specific heat at constant volume)
   dDEDT=(pow(10.0,dE_jp1)-pow(10.0,dE_j))/(pow(10.0,dLogTUpper)-pow(10.0,dLogTLower));
 }
-void eos::setExePath(){
-  /*This method might not be 100% portable, may need to look into other 
-  solutions if problems arise with this not being reliable*/
-  
-  char buff[1024];
-  ssize_t len = readlink("/proc/self/exe", buff, sizeof(buff)-1);
-  if (len != -1) {
-    buff[len] = '\0';
-    sExePath=std::string(buff);
-    
-    //find the first "/" from the end
-    unsigned pos=sExePath.find_last_of("/");
-    
-    //keep from the begging to the location of the last "/" to remove the name
-    //of the executable
-    sExePath=sExePath.substr(0,pos);
-    
-    //check to see if the last directory is "bin" if so remove that also
-    //as installed versions put the exe's into the bin directory and sExePath
-    //should point the top level directory.
-    pos=sExePath.find_last_of("/");
-    std::string sBin=sExePath.substr(pos+1,3);
-    
-    //if installed remove bin directory
-    if(sBin.compare("bin")==0){
-      sExePath=sExePath.substr(0,pos);
-    }
-    
-    
-  } else {
-    std::stringstream ssTemp;
-    ssTemp<<__FILE__<<":"<<__FUNCTION__<<":"<<__LINE__
-      <<": error determining executable path"<<std::endl;
-    throw exception2(ssTemp.str(),OUTPUT);
-  }
-}
+
