@@ -7,6 +7,7 @@
 #include "datafile.h"
 #include "argparser.h"
 #include "eos.h"
+#include "paths.h"
 
 //usage: mk2DSlice <fileRange> <eosFile> <nPlaneID> <planeIndex>  
 void make2DSlice(DataFile& bin, int nPlane,int nPlaneIndex);
@@ -124,8 +125,20 @@ void make2DSlice(DataFile& bin, int nPlane,int nPlaneIndex){//updated
     if(bin.sEOSFile!=""){//overwrite sEOSTable if sEOSFile is set
       sEOSTable=bin.sEOSFile;
     }
-    eosTable = new eos(sEOSTable);
-    eosTable->readBin();
+    
+    //set the exe directory
+    //test to see if sEOSTable is relative to the execuatable directory
+    std::string eosFileName;
+    if (sEOSTable.substr(0,1)!="/" && sEOSTable.substr(0,2)!="./" && sEOSTable.substr(0,1)!="~"){
+      //if absolute path not specified, assume EOS file is in eos folder. 
+      eosFileName=bin.sRootDir+PATHS::EOS+sEOSTable;
+    }
+    else{
+      eosFileName=sEOSTable;
+    }
+
+    eosTable = new eos(eosFileName); 
+    eosTable->readBin(); 
   }
   
   //read in artificial viscosity

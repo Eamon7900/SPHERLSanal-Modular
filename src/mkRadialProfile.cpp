@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
 
       curBin.sEOSFile = eosFile;
       curBin.bExtraInfoInProfile = extraInfo;
-      std::cout << "Creating rdial profile for: " << curBin.sFileName << std::endl;
+      std::cout << "Creating radial profile for: " << curBin.sFileName << std::endl;
       makeRadialProFromColBin(curBin);
   }
 

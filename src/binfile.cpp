@@ -19,6 +19,8 @@
     #include <mach-o/dyld.h>
 #endif
 
+#define MAX_PATH_LEN 2048
+
 static std::string getExeDir_WIN32();
 static std::string getExeDir_linux();
 static std::string getExeDir_APPLE();
@@ -89,7 +91,7 @@ static std::string getExeDir_WIN32(){
 
 static std::string getExeDir_linux(){
     #ifdef __linux__
-        char buff[1024];
+        char buff[MAX_PATH_LEN];
         std::string exePath;
         ssize_t len = readlink("/proc/self/exe", buff, sizeof(buff)-1);
         if (len != -1) {
@@ -108,12 +110,10 @@ static std::string getExeDir_linux(){
 
 static std::string getExeDir_APPLE(){
     #ifdef __APPLE__
-    char* buffer[2048];
-    if(_NSGetExecutablePath(&buffer[0], &bufferSize)) {
-        buffer.resize(bufferSize);
-        _NSGetExecutablePath(&buffer[0], &bufferSize);
-        return std::string path(buffer);
-    } 
+        char path[MAX_PATH_LEN];
+        uint32_t pathLen = MAX_PATH_LEN;
+        _NSGetExecutablePath(path, &pathLen);
+        return std::string(path);
     #endif
     return NULL;
 }

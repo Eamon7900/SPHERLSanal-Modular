@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #!/usr/bin/python2
 
-# usage: plot_2DSlices.py [-h] [-m] [-b] [-r] [-c] fileName
+# usage: plot_2DSlices.py [-h] [-m] [-b] [-r] [-c] fileName <eosFileName>
 
 # Plots 2D slices from xml configuration file specified by "fileName". A
 # description of the xml configuration file can be found in the reference file
@@ -125,6 +125,7 @@ def main():
   parser.add_argument('-r',action="store_true",default=False,help="Remove distributed binary files")
   parser.add_argument('-c',action="store_true",default=False,help="Show codes as they will be "\
     +"executed, mostly a debugging option")
+  parser.add_argument('eosFile', action="store", type=str, default="", help="Name of eosFile if not specified in binary file")
   
   #parse arguments
   parsed=parser.parse_args()
@@ -132,10 +133,10 @@ def main():
   #get xml settings
   if XML[0:1] == "." or XML[0:1] == "/" :  #If an absolute path is given, use it.
     print("Plotting 2D slices with XML: " + XML)
-    settings=xml.parse(XML);
+    settings=parseXMLFile(XML);
   else: #if an absolute path is not given, assume the XML file is in the config directory
     print("Plotting 2D Slices with XML: " + paths.SPHERLSanalConfig + XML)
-    settings=xml.parse(paths.SPHERLSanalConfig + XML)
+    settings=parseXMLFile(paths.SPHERLSanalConfig + XML)
   
   #set codes
   setCodes(settings,parsed)
@@ -1062,13 +1063,15 @@ def createPlots(settings,parsed):
     if plane['planeType']=="rp":
       nPlaneID=2
       planeID="j"
-    cmd = 'mk2DSlice' + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex'])+ ' ' + settings['inputFileName'];
-    print(cmd)
-    #success=os.system('mk2DSlice' + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex'])+ ' ' + settings['inputFileName'])
 
-    make_2DSlices.make_2DSlices(not(parsed.r),settings['inputFileName'],nPlaneID,plane['planeIndex']
-      ,parsed.m)
-    
+    if(parsed.eosFile!=""):
+      cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + ' ' + parsed.eosFile + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex']);
+    else:
+      cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + str(nPlaneID) + ' ' + str(plane['planeIndex']);
+    print(cmd); 
+
+    os.system(cmd);
+
     #get and sort files
     extension="_2D"+planeID+"="+str(plane['planeIndex'])+".txt"
     filesExistSlices=glob.glob(baseFileName+"*"+extension)

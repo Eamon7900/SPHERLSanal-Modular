@@ -5,6 +5,7 @@ class ArgParser {
         int range_l;
         int range_u;
         std::string baseFileName;
+        bool singleFile = false;
     public:
         ArgParser(std::string fileRange);
         std::string getBaseFileName();
