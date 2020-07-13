@@ -51,11 +51,11 @@ p^=-       sin(p)*x^+       cos(p)*y^
   <!-- <inputFileName></inputFileName>
     Name of the input file names including path. A single file can be choosen or, a range selected
     by providing [start index-end index], where "start index" is the first model dump to include
-    and "end index" is 1 larger than the last model dump to include. "end index" may also be a "*"
+    and "end index" is the last model dump to include. "end index" may also be a "*"
     which indicates that all model dumps from "start index" to the last model dump found is 
-    included. The frequency option allows one to skip plots. If set to 2 will plot every other file,
-    if 3 every third file etc.-->
-  <inputFileName  frequency="1">RRLHighV_t[0-9999999]</inputFileName>
+    included. 
+   --> 
+  <inputFileName >RRLHighV_t[0-9999999]</inputFileName>
   
   <!-- RT-plane with combined u-u_0 and v vectors, transform: p=0, x->x, z->y-->
   <!-- <plane></plane>

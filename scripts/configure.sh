@@ -37,10 +37,8 @@ SCRIPTS_PATH_EXPORT_CMD="export PATH=\$PATH:$ROOT_DIR/scripts/"
 }
 
 #If not already added, append SPHERLSanal to the path in the profile file specified (or ~/.profile by default)
-grep -q "$BIN_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a $BIN_PATH_EXPORT_CMD" $PROFILE_FILE 
-grep -q "$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a $SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE 
-
-
+grep -q "$BIN_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a \\$BIN_PATH_EXPORT_CMD" $PROFILE_FILE 
+grep -q "$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a \\$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE 
 
 #install python packages using pip
 pip install h5py

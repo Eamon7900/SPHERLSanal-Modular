@@ -6,12 +6,13 @@
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
 import sys
 import disect_filename
+import os
+
 def addParserOptions(parser):
   parser.add_option("-o","--outputFile",dest="outputFile",default="out"
     ,help="Specifies the OUTPUTFILE. [default: %default]"
@@ -35,8 +36,8 @@ def addParserOptions(parser):
     ,help="Keeps distributed binary files [default].",default=True)
   parser.add_option("-r","--remove",action="store_false",dest="keep"
     ,help="Removes distributed binary files")
-  parser.add_option("-m","--remake",action="store_true",dest="remake"
-    ,help="Will remake profiles if they already exist. [not default].",default=False)
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles even if they already exist. [not default].",default=False)
   parser.add_option("--remake-bins",action="store_true",dest="remakeBins"
     ,help="Will remake binaries even if they already exist. [not default].",default=False)
   parser.add_option("--points",action="store_true",dest="points",help="If set, will use points when"
@@ -62,13 +63,14 @@ def main():
   
   import matplotlib.pyplot as plt
   from matplotlib.gridspec import GridSpec
-  
+
+
   #get base file name
   fileName=args[0]
   [start,end,baseFileName]=disect_filename.disectFileName(fileName)
   
-  #make sure that all the combined binary files have profiles made
-  make_profiles.make_profiles(options.keep,fileName,options.remake,options.remakeBins)
+  if options.make:
+     os.system("mkRadPro" + fileName)  
   
   #get and sort files
   extension="_pro"+".txt"
