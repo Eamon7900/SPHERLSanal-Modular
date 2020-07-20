@@ -36,14 +36,16 @@ def addParserOptions(parser):
     ,help="Keeps distributed binary files [default].",default=True)
   parser.add_option("-r","--remove",action="store_false",dest="keep"
     ,help="Removes distributed binary files")
-  parser.add_option("-m","--make",action="store_true",dest="make"
-    ,help="Will make profiles even if they already exist. [not default].",default=False)
   parser.add_option("--remake-bins",action="store_true",dest="remakeBins"
     ,help="Will remake binaries even if they already exist. [not default].",default=False)
   parser.add_option("--points",action="store_true",dest="points",help="If set, will use points when"
     +" plotting in addition to lines [default: %default]",default=False)
   parser.add_option("--no-lines",action="store_true",dest="noLines",help="If set, will not use "
     +"lines when plotting, and only points [default: %default]",default=False)
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
 def parseOptions():
   #setup command line parser
   parser=op.OptionParser(usage="Usage: %prog [options] BASEFILENAME[START-END]"
@@ -70,8 +72,11 @@ def main():
   [start,end,baseFileName]=disect_filename.disectFileName(fileName)
   
   if options.make:
-     os.system("mkRadPro" + fileName)  
-  
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
+
   #get and sort files
   extension="_pro"+".txt"
   filesExistProfiles=glob.glob(baseFileName+"*"+extension)

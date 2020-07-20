@@ -226,7 +226,12 @@ def readWatchzone(fileName):
     print("error opening ",fileName," for reading")
     return
   f=open(fileName,'r')
-  
+
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   #skip first two lines
   line=f.readline()
   line=f.readline()

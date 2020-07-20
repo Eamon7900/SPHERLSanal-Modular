@@ -7,7 +7,7 @@
 
 import datafile
 import optparse as op
-import make_profiles
+import os
 import glob
 import math
 import numpy as np
@@ -43,6 +43,10 @@ def parseOptions():
     +" plotting in addition to lines [default: %default]",default=False)
   parser.add_option("--no-lines",action="store_true",dest="noLines",help="If set, will not use "
     +"lines when plotting, and only points [default: %default]",default=False)
+  parser.add_option("-m", "--make", action="store_true", dest="make", 
+    help="If set, will remake profiles (with no extra info) even if they already exist [not default].", default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   #parse command line options
   return parser.parse_args()
   
@@ -84,9 +88,13 @@ def main():
     end=int(parts2[2])
   
   #make sure that all the combined binary files have profiles made
-  make_profiles.make_profiles(options.keep,fileName)
-  
+  if options.make:
+    if options.eos != "":
+     os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   #get and sort files
+
   extension="_pro"+".txt"
   filesExistProfiles=glob.glob(baseFileName+"*"+extension)
   files=[]

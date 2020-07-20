@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-# Usage: work_plot.py [options] BASEFILENAME[START-END]
+# Usage: work_plot.py [options] <XMLFile>
 
 # Computes the work done in the model over each period between START and END
 
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
@@ -20,6 +19,8 @@ import warnings
 import mywarnings#imports some custom warning output formating
 import xmlParseFunctions#some commonly used xmlParsing functions
 import matplotlib
+import paths
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -198,8 +199,7 @@ class Settings:
       self.PdVPlotSettings.parseXML(pdVPlotsElement)
 def getPeriodRanges(baseFileName,start,end,options):
   #check that the averagePKE.txt file is there, and make sure it has all entries
-  averagePKEFile=os.path.dirname(baseFileName)+"/averagePKE.txt"
-  average_PKE.averagePKE(start,sys.maxsize,baseFileName,options)
+  averagePKEFile=paths.outputPath+"averagePKE.txt"
   
   #get periods in range indicated
   averagePKEFileData=datafile.DataFile()
@@ -226,22 +226,23 @@ def getPeriodRanges(baseFileName,start,end,options):
   return [periodRange,time]
 def parseOptions():
   #setup command line parser
-  parser=op.OptionParser(usage="Usage: %prog [options] BASEFILENAME[START-END]"
+  parser=op.OptionParser(usage="Usage: %prog [options] XMLFile" 
     ,version="%prog 1.0",description="Computes the work done in the model over each period between "
-    +"START and END")
+    +"START and END of files defined in XML")
   parser.add_option("-k","--keep",action="store_true",dest="keep"
     ,help="Keeps distributed binary files [default].",default=True)
   parser.add_option("-r","--remove",action="store_false",dest="keep"
     ,help="Removes distributed binary files")
-  parser.add_option("-m","--remake",action="store_true",dest="remake"
-    ,help="Will remake profiles if they already exist. [not default].",default=False)
   parser.add_option("--re-sum",action="store_true",dest="resum"
     ,help="Will re-sum all model profiles, usefull when files have problems being made from "
     +"corruption and have to be re-made. Other wise should not be used as it takes more time"
     +" [not default].",default=False)
   parser.add_option("-s","--show",dest="show",action="store_true",default=False
     ,help="Display plot to x11 display rather than saving to a file.")
-  
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   
   #parse command line options
   (options,args)=parser.parse_args()
@@ -258,13 +259,24 @@ def main():
   
   #get XML settings
   currentSettings=Settings()
-  currentSettings.parseXML(args[0])
-  
+  XML=args[0]
+  if XML[0:1] == "." or XML[0:1] == "/" :  #If an absolute path to the XML is given, use it.
+    print("Creating work plot with XML: " + XML)
+    currentSettings.parseXML(XML);
+  else: #if an absolute path is not given, assume the XML file is in the config directory
+    print("Creating work plot with XML: " + paths.configPath + XML)
+    currentSettings.parseXML(paths.configPath + XML)
+
   #get base file name
   [start,end,baseFileName]=disect_filename.disectFileName(currentSettings.files)
-  
+
   #make sure that all the combined binary files have profiles made
-  failedFiles=make_profiles.make_profiles(options.keep,currentSettings.files,options.remake,False)
+  fileName=currentSettings.files;
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   
   #get period ranges and times for each period from PKE file 
   [periodRange,time]=getPeriodRanges(baseFileName,start,end,options)
@@ -283,7 +295,6 @@ def main():
     firstFile=currentSettings.workPlotSettings.temperatureProfileFile
   else:
     firstFile=baseFileName+"00000000"
-  failedFiles2=make_profiles.make_profiles(options.keep,firstFile,options.remake,False)
   if not os.path.isfile(firstFile+extension):
     warnings.warn("didn't find profile or dump at \""+firstFile+extension+
       "\" using, \""+filesExistProfiles[0]+"\" instead.")
@@ -367,7 +378,7 @@ def main():
       
       #check headers for used columns
       if fileData.sColumnNames[currentSettings.pColumn]!=currentSettings.pColumnHeader:
-        warings.warn("file \""+files[i]+" has pressure column header as \""\
+        warnings.warn("file \""+files[i]+" has pressure column header as \""\
           +fileData.sColumnNames[currentSettings.pColumn]+" expected something like \""\
           +currentSettings.pColumnHeader+"\".")
       if currentSettings.AV:
@@ -489,6 +500,7 @@ def make_PdV_plot(x,y,zone,period,fig,ax1,settings):
   ax1.cla()#clear plot
   return True
 def make_Work_plot(x,y,yerr,fig,ax1,settings,period,time,xlabel):
+  print("Making work plot") #DEBUG    
   if settings.grid:
     ax1.grid(True,which="both")
   plotString='-'
@@ -511,12 +523,14 @@ def make_Work_plot(x,y,yerr,fig,ax1,settings,period,time,xlabel):
   ax1.set_ylabel("Work [ergs]")
   ax1.set_ylabel(xlabel)
   
-  sOutFileName=""
+  sOutFileName="" #DEBUG
   if xlabel=="zone #":
     sOutFileName=settings.outputFile+"_zones_period"+str(period)+"."+settings.format
   elif xlabel=="Log10(T)":
     sOutFileName=settings.outputFile+"_temp_period"+str(period)+"."+settings.format
-  
+
+  fig.add_subplot(ax1)
+
   print(__name__+":"+main.__name__+": creating plot \""+sOutFileName+" ...")
   fig.savefig(sOutFileName,format=settings.format,transparent=False)#save to file
   

@@ -45,7 +45,7 @@ pip install h5py
 pip install pyevtk
 pip install eos-py
 pip install numpy
-
+pip install scipy
 #Make working directories
 mkdir eos
 mkdir data

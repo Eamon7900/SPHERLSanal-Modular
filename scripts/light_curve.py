@@ -8,7 +8,6 @@
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import numpy as np
 import sys
@@ -49,8 +48,10 @@ def parseOptions():
     ,action="store_true"
     ,help="If set it will double the data in the light curve for easier "
     +"viewing of the light curve shape.",default=False)
-  
-  make_profiles.addParserOptions(parser)
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   
   #parse command line options
   return parser.parse_args()
@@ -165,13 +166,13 @@ class LightCurve:
     
     #make sure needed radial profiles are made
     fileName=self.baseFileName+"["+str(self.start)+"-"+str(self.end)+"]"
-    failedFiles=make_profiles.make_fileSet(fileName,options)#default is to make 
-                                                            #a profile set
-    
+    if options.make:
+      if options.eos != "":
+        os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+      else:
+        os.system("mkRadPro" + " " + fileName)    
+     
     #let user know if there were any failed files
-    if len(failedFiles)>0:
-      for failedFile in failedFiles:
-        print(failedFile)
         
     #get and sort profiles within range of dataset
     extension="_pro"+".txt"
@@ -473,6 +474,12 @@ def main():
   tree=xml.parse(args[0])
   root=tree.getroot()
   
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
+
   #get all light curve initialization data
   lightCurveElements=root.findall("lightCurve")
   lightCurves=[]

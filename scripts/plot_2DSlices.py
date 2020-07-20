@@ -119,24 +119,22 @@ def main():
     +"specified by \"fileName\". A description of the xml configuration file can be found in the"\
     +" reference file \"plot_2DSlices_reference.xml\" found with this script")
   parser.add_argument('fileName',action="store",type=str,help="Name of the xml configuration file")
-  parser.add_argument('-m',action="store_true",default=False,help="Remake 2D slices")
-  parser.add_argument('-b',action="store_true",default=False,help="Re-combine binary files, at "\
-    +"this option momement doesn't do anything")
+  parser.add_argument('-p',dest='plot',action="store_true",default=False, help="Only plot existing slices, do not remake")
   parser.add_argument('-r',action="store_true",default=False,help="Remove distributed binary files")
   parser.add_argument('-c',action="store_true",default=False,help="Show codes as they will be "\
     +"executed, mostly a debugging option")
-  parser.add_argument('eosFile', action="store", type=str, default="", help="Name of eosFile if not specified in binary file")
+  parser.add_argument('eosFile', action="store", nargs='?', const=1, default="", type=str, help="Name of eosFile if not specified in binary file")
   
   #parse arguments
   parsed=parser.parse_args()
   XML=parsed.fileName; 
   #get xml settings
-  if XML[0:1] == "." or XML[0:1] == "/" :  #If an absolute path is given, use it.
+  if XML[0:1] == "." or XML[0:1] == "/" :  #If an absolute path to the XML is given, use it.
     print("Plotting 2D slices with XML: " + XML)
     settings=parseXMLFile(XML);
   else: #if an absolute path is not given, assume the XML file is in the config directory
-    print("Plotting 2D Slices with XML: " + paths.SPHERLSanalConfig + XML)
-    settings=parseXMLFile(paths.SPHERLSanalConfig + XML)
+    print("Plotting 2D Slices with XML: " + paths.configPath + XML)
+    settings=parseXMLFile(paths.configPath + XML)
   
   #set codes
   setCodes(settings,parsed)
@@ -480,7 +478,10 @@ def parseXMLFile(fileName):
         else:#default
           vector['labelYPos']=0.92
       
-        #get texthttps://github.com/Eamon7900/SPHERLSanal-Modular.git
+        #get text
+        if labelElement.text!=None:
+          vector['label']=labelElement.text
+        else:#use default
           vector['label']=""
       else:
         vector['label']=""
@@ -1064,13 +1065,14 @@ def createPlots(settings,parsed):
       nPlaneID=2
       planeID="j"
 
-    if(parsed.eosFile!=""):
-      cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + ' ' + parsed.eosFile + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex']);
-    else:
-      cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + str(nPlaneID) + ' ' + str(plane['planeIndex']);
-    print(cmd); 
+    if(not parsed.plot):
+      if(parsed.eosFile!=""):
+        cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + ' ' + parsed.eosFile + ' ' + str(nPlaneID) + ' ' + str(plane['planeIndex']);
+      else:
+        cmd = 'mk2DSlice' + ' ' + "\"" + settings['inputFileName'] + "\"" + str(nPlaneID) + ' ' + str(plane['planeIndex']);
+      print(cmd); 
 
-    os.system(cmd);
+      os.system(cmd);
 
     #get and sort files
     extension="_2D"+planeID+"="+str(plane['planeIndex'])+".txt"
@@ -1188,11 +1190,10 @@ def plot_plane(fileName,nCount,fig,ax,plane,planes):
     
   #plot vectors
   for vector in plane['vectors']:
-    
     [X,Y,U,V,scale,maxMag,diag]=makeVectorPlotData(slice2D,plane,vector)
     scaleString=format(maxMag,"0.1e")
     scaleNumber=float(scaleString)
-    label=vector['label']
+    label=vector['label'] 
     labelScale=format(scaleNumber,"0.1e")
     
     label=label.replace("\scale",labelScale)

@@ -11,11 +11,11 @@
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
 import sys
+import os
 
 def parseOptions():
   #setup command line parser
@@ -58,7 +58,10 @@ def parseOptions():
   parser.add_option("--period",type="float",dest="period",help="Sets the period to use for "
     +"calculating the phase of plots. If not set it plots time instead of phase [default:%default]"
     ,default=None)
-    
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e, --eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   #parse command line options
   return parser.parse_args()
   
@@ -105,7 +108,11 @@ def main():
     end=int(parts2[2])
   
   #make sure that all the combined binary files in range have profiles
-  make_profiles.make_profiles(options.keep,fileName,options.remake,False)
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   
   #get and sort files
   extension="_pro.txt"

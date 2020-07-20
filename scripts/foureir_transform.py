@@ -9,7 +9,6 @@
 import os
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
@@ -31,10 +30,11 @@ def parseOptions():
   parser.add_option("-c","--column",type="int",dest="column",default=21,help="Sets the column "\
     +"in the radial profile file from which the fourier transform in computed. The default value "\
     +"is %default, the column for the radial grid velocity.")
-  
-  #add make_profile options to parser
-  make_profiles.addParserOptions(parser)
-  
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
+
   #parse command line options
   return parser.parse_args()
 def main():
@@ -45,8 +45,12 @@ def main():
   [start,end,baseFileName]=disect_filename.disectFileName(args[0])
   
   #make sure that all the combined binary files have profiles made
-  failedFiles=make_profiles.make_fileSet(args[0],options)
-  
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
+
   #get and sort files
   extension="_pro"+".txt"
   filesExistProfiles=glob.glob(baseFileName+"*"+extension)

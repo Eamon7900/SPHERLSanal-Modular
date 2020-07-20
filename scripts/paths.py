@@ -14,7 +14,8 @@ import sys
 BasePath=os.path.dirname(os.path.realpath(__file__))
 BasePath=os.path.dirname(BasePath)
 
-SPHERLSanalConfig=BasePath+"/config/"
+outputPath=BasePath+"/output/"
+configPath=BasePath+"/config/"
 scriptPath=BasePath+"/scripts/"
 SPHERLSDataPath=BasePath+"/data/"
 EOSPath=BasePath+"/eos/"

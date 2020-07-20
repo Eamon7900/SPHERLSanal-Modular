@@ -10,11 +10,12 @@
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
 import sys
+import os
+import paths
 
 def parseOptions():
   #setup command line parser
@@ -38,8 +39,6 @@ def parseOptions():
     ,help="Keeps distributed binary files [default].",default=True)
   parser.add_option("-r","--remove",action="store_false",dest="keep"
     ,help="Removes distributed binary files")
-  parser.add_option("-m","--remake",action="store_true",dest="remake"
-    ,help="Will remake profiles if they already exist. [not default].",default=False)
   parser.add_option("-p","--points",action="store_true",dest="points",help="If set, will use points when"
     +" plotting in addition to lines [default: %default]",default=False)
   parser.add_option("--no-grid",action="store_true",dest="noGrid"
@@ -57,7 +56,10 @@ def parseOptions():
   parser.add_option("--period",type="float",dest="period",help="Sets the period to use for "
     +"calculating the phase of plots. If not set it plots time instead of phase [default:%default]"
     ,default=None)
-    
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e" , "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   #parse command line options
   return parser.parse_args()
   
@@ -104,7 +106,11 @@ def main():
     end=int(parts2[2])
   
   #make sure that all the combined binary files in range have profiles
-  make_profiles.make_profiles(options.keep,fileName,options.remake,False)
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   
   #get and sort files
   extension="_pro.txt"
@@ -308,8 +314,8 @@ def main():
   if options.show:
     plt.show()
   else:
-    print(__name__+":"+main.__name__+": saving figure to file \""+options.outputFile+"."+options.format)
-    fig.savefig(options.outputFile+"."+options.format,format=options.format,transparent=False)#save to file
+    print(__name__+":"+main.__name__+": saving figure to file \""+ paths.outputPath+options.outputFile+"."+options.format)
+    fig.savefig(paths.outputPath + options.outputFile+"."+options.format,format=options.format,transparent=False)#save to file
   
 if __name__ == "__main__":
   main()

@@ -7,13 +7,13 @@
 
 import datafile
 import optparse as op
-import make_profiles
 import glob
 import math
 import numpy as np
 import sys
 import disect_filename
 import os
+import paths
 
 def parseOptions():
   #setup command line parser
@@ -35,8 +35,10 @@ def parseOptions():
     +"called \"maxTmTave.txt\" instead of \"averagePKE.txt\"")
   parser.add_option("-p",action="store",dest="period"
     ,help="Set the initial period to use for finding peaks.",default=None)
-  #parse command line options
-  make_profiles.addParserOptions(parser)
+  parser.add_option("-m","--make",action="store_true",dest="make"
+    ,help="Will make profiles (with no extra info) even if they already exist. [not default].",default=False)
+  parser.add_option("-e", "--eos", dest="eos", 
+    help="The filename (or absolute path) of the eos file used.", default="")
   
   return parser.parse_args()
 def main():
@@ -46,16 +48,17 @@ def main():
   
   #get base file name
   [start,end,baseFileName]=disect_filename.disectFileName(args[0])
-  
+  fileName = args[0]
   #make sure that all the combined binary files have profiles made
-  failedFiles=make_profiles.make_fileSet(args[0],options)
+  if options.make:
+    if options.eos != "":
+      os.system("mkRadPro" + " " + fileName + " " + options.eos)  
+    else:
+      os.system("mkRadPro" + " " + fileName)    
   
   #compute the average PKE
   averagePKE(start,end,baseFileName,options)
   
-  #report failed files
-  for file in failedFiles:
-    print(file)
 def averagePKE(start,end,baseFileName,options):
   """Computes the average PKE from radial profiles."""
   
@@ -98,26 +101,17 @@ def averagePKE(start,end,baseFileName,options):
   KE=[]
   #read in KE from average file, if file already exists
   lastIndex=-1
-  directory=os.path.dirname(baseFileName)
-  if directory=="":
-    if options.bLconInsteadofKE:
-      averagePKEFile="maxFcon.txt"
-    elif options.bumu0InsteadofKE:
-      averagePKEFile="maxumu0.txt"
-    elif options.bTmTaveInsteadofKE:
-      averagePKEFile="maxTmTave.txt"
-    else:
-      averagePKEFile="averagePKE.txt"
+
+  directory=paths.outputPath
+  if options.bLconInsteadofKE:
+    averagePKEFile=directory+"maxFcon.txt"
+  elif options.bumu0InsteadofKE:
+    averagePKEFile=directory+"maxumu0.txt"
+  elif options.bTmTaveInsteadofKE:
+    averagePKEFile=directory+"maxTmTave.txt"
   else:
-    if options.bLconInsteadofKE:
-      averagePKEFile=directory+"/maxFcon.txt"
-    elif options.bumu0InsteadofKE:
-      averagePKEFile=directory+"/maxumu0.txt"
-    elif options.bTmTaveInsteadofKE:
-      averagePKEFile=directory+"/maxTmTave.txt"
-    else:
-      averagePKEFile=directory+"/averagePKE.txt"
-    
+    averagePKEFile=directory+"averagePKE.txt"
+  
   if os.path.exists(averagePKEFile):
     if not options.resum:
       if options.bLconInsteadofKE:
