@@ -129,11 +129,12 @@ def main():
   if options.ymax!=None:
     max=options.ymax
   print("min=",min," max=",max)
+  print(surfaceLuminosity) #DEBUG
   ax1.plot(fileTimes,surfaceLuminosity,plotString)
   plt.ylim(min,max)
   ax1.set_xlabel("t [s]")
   ax1.set_ylabel("L [L_sun]")
-  ax1.set_title("Ligh Curve")
+  ax1.set_title("Light Curve")
   
   if options.show:
     plt.show()

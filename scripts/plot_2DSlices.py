@@ -19,6 +19,7 @@ import make_2DSlices
 import time
 import disect_filename
 import xml.etree.ElementTree as xml
+import matplotlib
 import parser
 import re
 import paths

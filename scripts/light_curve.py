@@ -471,9 +471,9 @@ def main():
     quit()
   
   #get root element
-  tree=xml.parse(args[0])
+  tree=xml.parse(paths.configPath + args[0])
   root=tree.getroot()
-  
+  fileName=root.get('inputFiles')
   if options.make:
     if options.eos != "":
       os.system("mkRadPro" + " " + fileName + " " + options.eos)  
