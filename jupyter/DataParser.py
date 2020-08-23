@@ -4,17 +4,28 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 import sys
+import math
+import scipy.interpolate as interpolate
+from scipy.signal import argrelextrema
+from scipy import signal
+from scipy import stats
+from scipy import interpolate
 
 #A class to store and process the data from one ModelDump
 class ModelDump:
     fileName = "" #The fileName of this model dump 
     time = 0 #Time for this ModelDump
+    phase = 0 #Phase of this ModelDump
     grid = [] #Array of dictionaries containing data for each zone
 
     def __init__(self, fileName, time, grid):
         self.fileName = fileName
         self.time = time
         self.grid = grid
+        
+    def calcPhase(self, period):
+        
+        self.phase = (self.time % period)/period
 
 #A class to store and process a set of ModelDumps
 class DataSet:
@@ -24,12 +35,12 @@ class DataSet:
     times = [] #Array of the times of all model dumps this DataSet contains 
     dataDir = "data/"
     profileExt = "_pro.txt"
-    
+    period = 0
+
     #Disects a filerange into dictionary containining a start, and end, and a basefilename
 
     @staticmethod
     def disectFileRange(fileRange):
-
         #get base file name
         parts0=fileRange.split('[',1)
         if len(parts0)<2:# maybe a single file?
@@ -39,7 +50,7 @@ class DataSet:
                 end=start+1
                 baseFileName=parts3[0]+'_t'
             else:
-                print(disectFileName.__name__+": unrecognized file type "+fileName\
+                print(disectFileRange.__name__+": unrecognized file type "+fileRange\
                     +" expecting something with an _tXXXXXXXX suffix, where X's denote digits.")
                 return {} 
 
@@ -74,7 +85,6 @@ class DataSet:
                     time = time.strip().split()
                     time = np.float(time[1])
                     self.times.append(time)
-                    print("TimeArray: " + str(self.times)) #TEST
 
                     #Read in the data from the grid of each dump file
                     data = pd.read_csv(dataFile, delimiter='\s+').to_dict(orient='records')
@@ -83,5 +93,56 @@ class DataSet:
                         curGrid.append(row)
                     self.data.append(ModelDump(fileName, time, curGrid))
 
+        print("Read in time series of: " + str(self.times))
         self.times = np.array(self.times)
+        
         # calculate the period using autocorrelation:
+        seriesTime = 20 * 86400 # always calculate over last 20 days of the time series
+        periodResolution = 0.0001 * 24 * 3600
+
+        nsteps = np.int(seriesTime / periodResolution)#
+        nsteps = np.min((10**5, nsteps))
+
+        maxTime = max(self.times)
+        minTime = maxTime - seriesTime
+
+        #use the last U0 in each model dump with a stable time
+        StableTime = []
+        Ur0_short = []
+        for modelDump in self.data:
+            if modelDump.time > minTime:
+                Ur0_short.append(modelDump.grid[-1]["U0"]) 
+                StableTime.append(modelDump.time)
+
+        print("Stable times for period autocorrelation: " + str(StableTime))
+        print("Stable Ur0 for period autocorrelation: " + str(Ur0_short))
+
+        print("\n Beginning autocorrelation")
+        minTime = np.max((StableTime[0],minTime))
+        print("Minimum Time:" + str(minTime))
+
+        InterpedTime = np.linspace(minTime, maxTime, nsteps)
+        print("Interpolated time series: " + str(InterpedTime))
+
+        Interped = interpolate.interp1d(StableTime, Ur0_short)
+        InterpedUr0 = Interped(InterpedTime[1:])
+        print("Interpolated Ur0: " + str(InterpedUr0))
+
+
+        Correlation = np.correlate(InterpedUr0,InterpedUr0,mode='full')
+        print("Correlation: " + str(Correlation))
+
+        timestep = (np.max(StableTime) - np.min(StableTime)) / nsteps
+        peaks = signal.argrelextrema(Correlation[nsteps:nsteps+np.int(nsteps/4)],np.greater)
+        print("Peaks: " + str(peaks))
+
+        period  = np.mean(np.diff(peaks))*timestep/86400
+        PeriodError = np.std(np.diff(peaks))*timestep/86400
+
+        print("calculated period of " + str(period) + " from data set") #DEBUG 
+
+        self.period = period
+        self.pererr = PeriodError
+
+        
+        
