@@ -41,11 +41,7 @@ grep -q "$BIN_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a \\$BIN_PATH_EXPO
 grep -q "$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE || sed -i.bak "$ a \\$SCRIPTS_PATH_EXPORT_CMD" $PROFILE_FILE 
 
 #install python packages using pip
-pip install h5py
-pip install pyevtk
-pip install eos-py
-pip install numpy
-pip install scipy
+pip install -r ./requirements.txt
 #Make working directories
 mkdir eos
 mkdir data
