@@ -71,7 +71,10 @@ class DataSet:
             "baseName" : baseFileName
         } 
 
-    def __init__(self,fileRanges):
+    def __init__(self, dataPath, fileRanges):
+        if not dataPath == "":
+            self.dataDir = dataPath + "/"
+        print(self.dataDir) #TEST
         for fileRange in fileRanges:
             self.fileRanges.append(DataSet.disectFileRange(fileRange))
         for fileRange in self.fileRanges:
@@ -92,7 +95,7 @@ class DataSet:
                     for row in data:
                         curGrid.append(row)
                     self.data.append(ModelDump(fileName, time, curGrid))
-
+ 
         print("Read in time series of: " + str(self.times))
         self.times = np.array(self.times)
         
