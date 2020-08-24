@@ -16,7 +16,7 @@ class ModelDump:
     fileName = "" #The fileName of this model dump 
     time = 0 #Time for this ModelDump
     phase = 0 #Phase of this ModelDump
-    grid = [] #Array of dictionaries containing data for each zone
+   
 
     def __init__(self, fileName, time, grid):
         self.fileName = fileName
@@ -62,7 +62,7 @@ class DataSet:
             parts2=parts1[0].split('-')
             start=int(parts2[0])
             if parts2[1]=="*":
-                end=sys.maxsize
+                end=99999999
             else:
                 end=int(parts2[1])        
         return {
@@ -90,11 +90,11 @@ class DataSet:
                     self.times.append(time)
 
                     #Read in the data from the grid of each dump file
-                    data = pd.read_csv(dataFile, delimiter='\s+').to_dict(orient='records')
-                    curGrid = [] #Each grid is an array of dictionaries (one for each row)
-                    for row in data:
-                        curGrid.append(row)
-                    self.data.append(ModelDump(fileName, time, curGrid))
+                    data = pd.read_csv(dataFile, delimiter='\s+').to_dict(orient='list')
+                    #curGrid = [] #Each grid is an array of dictionaries (one for each row)
+                    #for row in data:
+                    #    curGrid.append(row)
+                    self.data.append(ModelDump(fileName, time, data))
 
         #print("Read in time series of: " + str(self.times))
         self.times = np.array(self.times)
@@ -114,7 +114,7 @@ class DataSet:
         Ur0_short = []
         for modelDump in self.data:
             if modelDump.time > minTime:
-                Ur0_short.append(modelDump.grid[-1]["U0"]) 
+                Ur0_short.append(modelDump.grid["U0"][-1]) 
                 StableTime.append(modelDump.time)
 
         print("Stable times for period autocorrelation: " + str(StableTime))
