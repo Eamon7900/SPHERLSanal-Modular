@@ -1,0 +1,8 @@
+h5py
+pyevtk
+eos-py
+numpy
+scipy
+jupyter
+pandas
+matplotlib

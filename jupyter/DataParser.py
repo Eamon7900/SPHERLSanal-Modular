@@ -95,8 +95,8 @@ class DataSet:
                     for row in data:
                         curGrid.append(row)
                     self.data.append(ModelDump(fileName, time, curGrid))
- 
-        print("Read in time series of: " + str(self.times))
+
+        #print("Read in time series of: " + str(self.times))
         self.times = np.array(self.times)
         
         # calculate the period using autocorrelation:
